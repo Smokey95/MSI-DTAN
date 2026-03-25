@@ -1,0 +1,97 @@
+---
+title: "exercise"
+output: html_document
+date: "2026-03-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Week 2 (Basic Regression)
+
+### Maximum Likelihood Principle (linear regression)
+
+Simuliere 50 Datenpunkte (x, y) unter den Annahmen einer linearen Regression mit $\beta_0 = 1, \beta_1 = 2,
+und $\sigma^2 = 1$. x soll im Bereich von 0 bis 5 liegen.
+
+> Tipps: Um gleichabstandige x-Werte zu erzeugen, verwende die Funktion `seq` um Zufallszahlen zu erzeugen, verwende die Funktion `rnorm`.
+
+#### a: Visualisierung
+Stellen Sie sich die Regressionsgerade $\mu = E(y|x)$ und die Datenpunkte vor. Sie können die folgenden R-Befehle verwenden: `lines`
+
+```{r}
+set.seed(123) # Für Reproduzierbarkeit
+
+# Simuliere 50 x-Werte im Bereich von 0 bis 5
+x = seq(0, 5, length.out = 50)
+
+# Simuliere y-Werte basierend auf der linearen Regression mit Rauschen wie in Aufgabenbeschreibung
+beta0 = 1
+beta1 = 2
+sigma = 1
+
+# Simuliere y-Werte mit Rauschen gemäß der linearen Regression
+y = beta0 + beta1 * x + rnorm(50, mean = 0, sd = sigma)
+
+# Visualisierung der Datenpunkte und der Regressionsgeraden
+plot(x, y, main = "Simulierte Datenpunkte", xlab = "x", ylab = "y")
+abline(a = beta0, b = beta1, col = "red", lwd = 2) # Regressionsgerade
+```
+
+#### b: Funktion
+
+Schreibe eine Funktion, die mithilfe der Funktion `dnorm` die negative Log-Likelihood berechnet.
+Nutzen Sie die Tatsache, dass `dnorm()` die Dichtefunktion zurückgibt.
+Nehmen Sie, wie in der Vorlesung besprochen, an, dass alle Datenpunkte unabhängig und identisch verteilt sind.
+Dann ist die negative Log-Likelihood (NLL) die Summe der negativen Log-Dichtefunktionen.
+
+Sie können die folgende Vorlage verwenden:
+```{r}
+  like = function(beta_0, beta_1){
+    ret = ...
+    return (ret)
+}
+```
+
+```{r}
+like = function(beta_0, beta_1){
+  # Berechnung der negativen Log-Likelihood
+  nll = -sum(dnorm(y, mean = beta_0 + beta_1 * x, sd = sigma, log = TRUE))
+  return(nll)
+}
+```
+
+Nehmen wir vorerst an, dass $\sigma^2 = 1 $ ist (der genaue Wert hat keinen Einfluss auf die Lage des Minimums für die Betas):
+
+Bei $\sigma^2 = 1$ sollte der NLL-Wert bei $\beta_0 = 0, \beta_1 = 1$ bei etwa 8,8 liegen
+
+#### c
+
+Variiere die Parameter systematisch und versuche, das Minimum zu finden, das du für  Schleifen verwenden könntest.
+
+```{r}
+# Beispiel für die systematische Variation der Parameter
+beta_0_values = seq(0, 2.05, by = 0.1)
+beta_1_values = seq(1, 3.05, by = 0.1)
+
+# Berechnung der NLL-Werte für jede Kombination von beta_0 und beta_1
+nll_values = matrix(NA, nrow = length(beta_0_values), ncol = length(beta_1_values))
+
+# Schleifen zur Berechnung der NLL-Werte
+for (i in 1:length(beta_0_values)) {
+  for (j in 1:length(beta_1_values)) {
+    # Berechnung der NLL für die aktuelle Kombination von beta_0 und beta_1
+    nll_values[i, j] = like(beta_0_values[i], beta_1_values[j])
+  }
+}
+
+# Finden des Minimums
+min_index = which(nll_values == min(nll_values), arr.ind = TRUE)
+
+# Ausgabe der besten beta_0 und beta_1 Werte
+best_beta_0 = beta_0_values[min_index[1]]
+best_beta_1 = beta_1_values[min_index[2]]
+cat("Bestes beta_0:", best_beta_0, "\n")
+cat("Bestes beta_1:", best_beta_1, "\n")
+```

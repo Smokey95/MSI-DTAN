@@ -1,0 +1,106 @@
+---
+title: "exercise_02"
+output: html_document
+date: "2026-03-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exercise 2 (Estimation)
+
+Nehmen Sie an, dass die Daten von einer Gauß- bzw. Normalverteilung stammen und wie folgt verteilt sind: $$Y \sim N(\mu, \sigma^2 = 1) $$ Für diese Aufgabe müssen Sie Beispiele aus einer Gaußverteilung zeichnen/ziehen. In R erfolgt dies mit `rnorm()`.
+
+a)  Nehmen Sie an, dass Daten aus einer Normalverteilung mit dem wahren Wert μ=42 und σ2=1 stammen. Man zieht eine kleine Stichprobe der Größe n=6 und berechnet daraus den Mittelwert (mean) und den Median.
+
+```{r}
+a = rnorm(6, 42, 1)
+mean_a = mean(a)
+median_a = median(a)
+mean_a
+median_a
+```
+
+b)  Wiederholen Sie a) 10.000 mal, wie ist der Mittelwert (mean) verteilt. Nutzen Sie hierzu eine for-loop
+
+```{r}
+res_mean = numeric(10000)
+res_median = numeric(10000)
+
+for (i in 1:10000) {
+  # get data like done before
+  data = rnorm(n = 6, mean = 42, sd = 1)
+  # safe data from current run to array
+  res_mean[i] = mean(data)
+  res_median[i] = median(data)
+}
+
+plot(density(res_mean), col="blue", main="Sampling Distribution")
+lines(density(res_median), col="red")
+```
+
+c)  Sampling Distribution: Die 10.000 berechneten Mittelwerte bilden eine eigene Verteilung. Unbiasedness: Ein Schätzer ist erwartungstreu (unbiased), wenn sein Durchschnitt über unendlich viele Stichproben dem wahren Wert entspricht. Ergebnis: Der Mittelwert ist für eine Normalverteilung ein erwartungstreuer Schätzer von μ, da die Verteilung der Schätzwerte im Durchschnitt genau bei 42 liegen wird
+
+```{r}
+# Plot der Dichte für den Mittelwert (Blau)
+plot(density(res_mean), col="blue", lwd=2, 
+     main="Sampling Distribution: Mean vs. Median",
+     xlab="Geschätztes My", ylab="Dichte")
+
+# Hinzufügen der Dichte für den Median (Rot)
+lines(density(res_median), col="red", lwd=2)
+
+# Legende hinzufügen
+legend("topright", legend=c("Mittelwert", "Median"), col=c("blue", "red"), lwd=2)
+```
+
+Um die Effizienz (Efficiency) mathematisch zu beurteilen, berechnest du die Standardabweichung der 10.000 Schätzwerte:
+
+```{r}
+sd_mean <- sd(res_mean)
+sd_median <- sd(res_median)
+
+# Ausgabe der Ergebnisse
+cat("Standardabweichung Mittelwert:", sd_mean, "\n")
+cat("Standardabweichung Median:", sd_median, "\n")
+```
+
+Vergleich der Streuung: Du wirst im Plot sehen, dass beide Kurven um den wahren Wert 42 zentriert sind (beide sind unbiased/erwartungstreu). Die Kurve für den Mittelwert ist jedoch in der Regel "schmaler" und "höher" als die des Medians. Effizienz (Efficiency): Ein Schätzer ist effizienter, wenn die Streuung seiner Stichprobenverteilung kleiner ist. Da der Mittelwert bei einer Normalverteilung eine geringere Standardabweichung aufweist als der Median, liefert er präzisere Schätzungen. Fazit: Auf Grundlage der Ergebnisse würde man den Mittelwert bevorzugen, da er effizienter ist – die einzelnen Schätzwerte liegen im Durchschnitt näher am wahren Wert
+
+e)  Ist der Mittelwert (mean) ein konsistenter Schätzer? Verstehen Sie den Begriff "consistent estimator" zu verstehen. Erstellen Sie eine kleine Simmulation hierfür.
+
+```{r}
+# Parameter
+n_iterations <- 10000
+true_mu <- 42
+
+# Speicher für Ergebnisse
+res_n6 <- numeric(n_iterations)
+res_n1000 <- numeric(n_iterations)
+
+# Simulation
+for (i in 1:n_iterations) {
+  # Kleine Stichprobe (n=6)
+  res_n6[i] <- mean(rnorm(n = 6, mean = true_mu, sd = 1))
+  
+  # Große Stichprobe (n=1000)
+  res_n1000[i] <- mean(rnorm(n = 1000, mean = true_mu, sd = 1))
+}
+
+# Visualisierung
+plot(density(res_n6), col="blue", lwd=2, main="Konsistenz des Mittelwerts",
+     xlab="Schätzwert", xlim=c(40, 44))
+lines(density(res_n1000), col="darkgreen", lwd=2)
+abline(v = true_mu, lty=2) # Wahrer Wert
+legend("topright", legend=c("n = 6", "n = 1000"), col=c("blue", "darkgreen"), lwd=2)
+```
+
+Auswertung der Simulation Wenn du diesen Code ausführst, wirst du Folgendes beobachten:
+
+```         
+Bei n=6 (blau): Die Verteilung der Mittelwerte ist breit gestreut. Viele Schätzungen liegen deutlich neben der 42.
+Bei n=1000 (grün): Die Verteilung ist extrem schmal und konzentriert sich massiv um den wahren Wert 42.
+```
+
+Fazit für die Aufgabe: Da die Streuung der Schätzwerte mit wachsendem n gegen Null geht und die Verteilung auf den wahren Wert „zusammenschrumpft“, ist der Mittelwert ein konsistenter Schätzer. Möchtest du zum Abschluss noch eine Karteikarte zu den drei Gütekrite
