@@ -23,6 +23,7 @@ source("requirements.R")
 When using VS Code you need to install the R extension and the required packages. You can install the packages by running the same command as above in the R terminal.
 
 - [Quarto](https://quarto.org/docs/get-started/) is required to render the R Markdown files. You can install it by following the instructions on the Quarto website.
+  - [Quarto VS Code Extension](https://marketplace.visualstudio.com/items?itemName=quarto.quarto) is required to render the R Markdown files in VS Code. You can install it by following the instructions on the Quarto website.
 - [Pandoc](https://pandoc.org/installing.html) is required to render the R Markdown files. You can install it by following the instructions on the Pandoc website.
 
 ## Content

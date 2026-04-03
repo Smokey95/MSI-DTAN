@@ -1,0 +1,251 @@
+---
+title: "Week 3 (Statistical Interpretation of Linear Regression)"
+date: "03.04.2026"
+format:
+  html:
+    author: ""
+  pdf: default
+
+metadata-files:
+  - ../../.private.yml
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Exercise 1 (Simulation Study)
+
+Für diese Simulationsstudien können Sie denselben Code wiederverwenden, der in der Übung (Lineare Regression; Simulation) verwendet wurde.
+
+## a) Varianz der geschätzten Koeffizienten
+Überprüfen Sie mithilfe eines Simulationsversuchs die folgende Formel für die eindimensionale Regression: 
+<!--(@TODO: Schau dir nochmal Folie 15 in VL 3 an)-->
+$$var(\hat{\beta}_0) = \sigma^2 \left(\frac{\bar{x}^2}{\sum (x_i - \bar{x})^2} \right)$$
+und
+$$var(\hat{\beta}_1) = \sigma^2 \left(\frac{\sigma^2}{\sum (x_i - \bar{x})^2} \right)$$
+Führen Sie die Überprüfung durch, indem Sie die Varianzen für $\hat{\beta}$ anhand der Simulationsergebnisse berechnen und die oben genannten Formeln verwenden. 
+In den Formeln ist $\overline{x}$ der Mittelwert der Stichprobe und $\sigma$ bezieht sich auf das in der Simulation verwendete $\sigma$ (Standardabweichung der Grundgesamtheit).
+
+---
+
+Im ersten Schritt der Simulation werden 1000 Datensätze mit 50 Datenpunkten generiert, wobei die wahren Koeffizienten $\beta_0$ und $\beta_1$ auf 1 bzw. 2 gesetzt werden. Anschließend werden die Koeffizienten für jeden Datensatz geschätzt, um die Verteilung der geschätzten Koeffizienten zu erhalten.
+
+Zum Speichern der geschätzten Koeffizienten werden zwei Vektoren `beta0_estimates` und `beta1_estimates` erstellt, die die geschätzten Werte für $\hat{\beta}_0$ und $\hat{\beta}_1$ aus jeder Simulation speichern.
+
+Die Schätzung der Koeffizienten erfolgt dabei wie in der Vorlesung gezeigt durch die Verwendung der Funktion `lm()`, die eine lineare Regression durchführt. Die geschätzten Koeffizienten werden dann in den entsprechenden Vektoren gespeichert.
+
+```{r}
+set.seed(123) # Für Reproduzierbarkeit
+# Simuliere 1000 Datensätze mit 50 Datenpunkten
+n_simulations = 1000
+n_points = 50
+beta0 = 1
+beta1 = 2
+sigma = 1
+beta0_estimates = numeric(n_simulations)
+beta1_estimates = numeric(n_simulations)
+for (i in 1:n_simulations) {
+  x = seq(0, 5, length.out = n_points)
+  y = beta0 + beta1 * x + rnorm(n_points, mean = 0, sd = sigma)
+  
+  # Schätze die Koeffizienten mit lm()
+  model = lm(y ~ x)
+  beta0_estimates[i] = coef(model)[1]
+  beta1_estimates[i] = coef(model)[2]
+}
+```
+
+Wie in der Musterlösung gezeigt, lassen sich die geschätzten Koeffizienten visualisieren, um einen Eindruck von ihrer Verteilung zu bekommen.
+
+> Reminder: $\beta_0$ wurde auf 1 und $\beta_1$ auf 2 gesetzt. Daher sollten die Verteilungen der geschätzten Koeffizienten um diese Werte zentriert sein.
+```{r}
+hist(beta0_estimates, main = "Verteilung beta_0 ", xlab = "beta_0 Schätzungen")
+```
+
+```{r}
+hist(beta1_estimates, main = "Verteilung der geschätzten beta_1", xlab = "beta_1 Schätzungen")
+```
+
+Um den gewünschten Vergleich durchzuführen wird vorerst die tatsächliche Varianz (empirische Varianz) der geschätzten Koeffizienten aus den Simulationsergebnissen berechnet.
+```{r}
+# Berechnung der Varianzen der geschätzten Koeffizienten
+var_beta0 = var(beta0_estimates)
+var_beta1 = var(beta1_estimates)
+```
+
+Anschließend werden die theoretischen Varianzen mit den Formeln (s.o.) berechnet und beide Werte miteinander verglichen.
+```{r}
+# Berechnung der theoretischen Varianzen
+x = seq(0, 5, length.out = n_points)
+x_bar = mean(x)
+theoretical_var_beta0 = sigma^2 * (x_bar^2 / sum((x - x_bar)^2))
+theoretical_var_beta1 = sigma^2 / sum((x - x_bar)^2)
+cat("Varianz von beta_0:", var_beta0, "\n")
+cat("Theoretische Varianz von beta_0:", theoretical_var_beta0, "\n")
+cat("Varianz von beta_1:", var_beta1, "\n")
+cat("Theoretische Varianz von beta_1:", theoretical_var_beta1, "\n")
+```
+
+### Visualisierung der Einflussfaktoren
+Um die Einflussfaktoren auf die Varianz der geschätzten Koeffizienten zu visualisieren (3 Punkte) wird der oben gezeigte Code in eine Funktion überführt, die es ermöglicht die Anzahl der Datenpunkte $n$, die Streuung der Daten $\sigma$ und das Rauschen zu variieren.
+```{r}
+simulate_regression <- function(n_points, x_range_max, sigma, n_simulations = 1000) {
+  set.seed(67)
+  beta0 = 1
+  beta1 = 2
+
+  beta0_estimates = numeric(n_simulations)
+  beta1_estimates = numeric(n_simulations)
+  
+  for (i in 1:n_simulations) {
+    # Steuerung von n_points und dem x-Bereich (Spread)
+    x = seq(0, x_range_max, length.out = n_points)
+    # Steuerung von sigma (Rauschen)
+    y = beta0 + beta1 * x + rnorm(n_points, mean = 0, sd = sigma)
+    
+    model = lm(y ~ x)
+    beta0_estimates[i] = coef(model)[1]
+    beta1_estimates[i] = coef(model)[2]
+  }
+  
+  var_beta0 = var(beta0_estimates)
+  var_beta1 = var(beta1_estimates)
+  
+  x_bar = mean(x)
+  theoretical_var_beta0 = sigma^2 * (x_bar^2 / sum((x - x_bar)^2))
+  theoretical_var_beta1 = sigma^2 / sum((x - x_bar)^2)
+  
+  cat("Varianz von beta_0:", var_beta0, "\n")
+  cat("Theoretische Varianz von beta_0:", theoretical_var_beta0, "\n")
+  cat("Varianz von beta_1:", var_beta1, "\n")
+  cat("Theoretische Varianz von beta_1:", theoretical_var_beta1, "\n")
+}
+```
+
+### Beispiel-Aufrufe zum Testen der Einflüsse:
+#### 1. Basis-Setup
+```{r}
+simulate_regression(n_points = 50, x_range_max = 5, sigma = 1)
+```
+
+#### 2. Einfluss von mehr Datenpunkten (n auf 200 erhöhen)
+```{r}
+simulate_regression(n_points = 200, x_range_max = 5, sigma = 1)
+```
+
+#### 3. Einfluss von mehr Spread (x-Bereich auf 10 erhöhen)
+
+```{r}
+simulate_regression(n_points = 50, x_range_max = 10, sigma = 1)
+```
+
+#### 4. Einfluss von weniger Rauschen (sigma auf 0.5 senken)
+```{r}
+simulate_regression(n_points = 50, x_range_max = 5, sigma = 0.5)
+```
+
+#### 5. Einfluss von mehr Datenpunkten, mehr Spread und weniger Rauschen
+```{r}
+simulate_regression(n_points = 200, x_range_max = 10, sigma = 0.5)
+```
+
+## b) Konfidenzintervall
+Der Grundgedanke von 95-prozentigen Konfidenzintervallen (CI) besteht darin, dass nur 5 % der
+tatsächlichen Koeffizienten außerhalb der Konfidenzintervalle liegen.
+
+>Anstelle der magischen 95 % können Sie natürlich auch andere Werte wählen. Statistisches Kleingedrucktes: Hier liegen langfristig genau 5 % außerhalb. Bei manchen Problemen werden die Konfidenzintervalle so definiert, dass maximal 5% außerhalb liegen.
+
+Führen Sie eine Simulationsstudie durch, um zu überprüfen, ob die Konfidenzintervalle tatsächlich in 5 % der Fälle die tatsächlichen Werte nicht einschließen. Es reicht aus, die Konfidenzintervalle für die Steigung ($\beta_1$) zu überprüfen.
+
+> Tipp: Die untere (`l`) und obere (`u`) Grenze des Konfidenzintervalls der Steigung kann wie folgt ermittelt werden:
+> ```
+> d = confint(res) # res ist das Ergebnis von lm()
+> l = d[2, 1] # Untere Grenze für beta1
+> u = d[2, 2] # Obere Grenze für beta1
+> ```
+---
+
+Wie in der vorigen Simulation werden 1000 Datensätze mit 50 Datenpunkten generiert, wobei die wahren Koeffizienten $\beta_0$ und $\beta_1$ auf 1 bzw. 2 gesetzt werden.
+Um zu überprüfen, ob die Konfidenzintervalle tatsächlich in 5 % der Fälle die tatsächlichen Werte nicht einschließen, werden zwei logische Vektoren `outside_ci` und `inside_ci` erstellt, um zu speichern, ob der wahre Wert von $\beta_1$ außerhalb oder innerhalb des berechneten Konfidenzintervalls liegt.
+```{r}
+set.seed(123)
+n_simulations = 1000
+n_points = 50
+beta0 = 1
+beta1 = 2 # Unser wahrer Wert für die Steigung
+sigma = 1
+
+# Vektor, um zu speichern, ob der wahre Wert außerhalb des CI liegt
+outside_ci = logical(n_simulations)
+
+# Vektor, um zu speichern, ob der wahre Wert innerhalb des CI liegt
+inside_ci = logical(n_simulations)
+
+beta1_estimates = numeric(n_simulations)
+ci_lower = numeric(n_simulations)
+ci_upper = numeric(n_simulations)
+```
+
+Anschließend wird für jeden simulierten Datensatz erneut die lineare Regression mittels `lm()` durchgeführt, um die geschätzten Koeffizienten zu erhalten. Danach werden die Konfidenzintervalle für $\beta_1$ berechnet und überprüft, ob der wahre Wert von $\beta_1$ innerhalb oder außerhalb des Intervalls liegt. Die Ergebnisse werden in den entsprechenden Vektoren gespeichert.
+```{r}
+for (i in 1:n_simulations) {
+  x = seq(0, 5, length.out = n_points)
+  y = beta0 + beta1 * x + rnorm(n_points, mean = 0, sd = sigma)
+  
+  # Modell schätzen
+  model = lm(y ~ x)
+
+  beta1_estimates[i] = coef(model)[2]
+  ci_lower[i] = confint(model)[2, 1] # Untere Grenze für beta1
+  ci_upper[i] = confint(model)[2, 2] # Obere Grenze für beta1
+  
+  # Konfidenzintervalle berechnen [2]
+  d = confint(model) 
+  l = d[2, 1] # Untere Grenze für beta1
+  u = d[2, 2] # Obere Grenze für beta1
+
+  # Prüfen, ob der wahre Wert beta1 innerhalb liegt
+  if (beta1 < l || beta1 > u) {
+    outside_ci[i] = TRUE
+  } else {
+    inside_ci[i] = TRUE
+  }
+}
+```
+
+Laut der statistischen Theorie eines 95%-Konfidenzintervalls sollten bei 1000 Simulationen ungefähr nur 50 Fälle (5 %) außerhalb des Intervalls liegen. Um dies zu überprüfen, wird der Anteil der Fälle berechnet, in denen $\beta_1$ außerhalb des 95%-CI liegt, sowie der Anteil der Fälle, in denen $\beta_1$ innerhalb des 95%-CI liegt. Wenn das Ergebnis, `error_rate` nahe bei 0.05 (bzw. 5 %) liegt, bestätigt die Simulation die theoretische Erwartung. Dies ist wie in folgendem Code zu sehen der Fall:
+```{r}
+# Ergebnis berechnen: Anteil der "Fehlschläge"
+error_rate = mean(outside_ci)
+cat("Anteil der Fälle, in denen beta1 außerhalb des 95%-CI liegt:", error_rate * 100, "%\n")
+
+# Ergebnis berechnen: Anteil der Fälle, in denen beta1 innerhalb des 95%-CI liegt
+inside_rate = mean(inside_ci)
+cat("Anteil der Fälle, in denen beta1 innerhalb des 95%-CI liegt:", inside_rate * 100, "%\n")
+```
+
+### Visualisierung der Ergebnisse
+Weil ich Grafiken mega stark finde habe ich mal von meinem LLM des Vertrauens bisschen Code erstellen lassen, um die Ergebnisse der Simulation zu visualisieren. Es werden zwei Grafiken erstellt: Eine Histogramm der Stichprobenverteilung der geschätzten $\beta_1$-Werte und ein Coverage Plot, der zeigt, welche Konfidenzintervalle den wahren Wert von $\beta_1$ enthalten und welche nicht. In diesem Plot werden die Intervalle rot gefärbt, wenn sie den wahren Wert nicht enthalten, und grau, wenn sie ihn enthalten. Eine horizontale Linie markiert den wahren Wert von $\beta_1$.
+```{r}
+# --- Visualisierung 1: Stichprobenverteilung (Sampling Distribution) ---
+hist(beta1_estimates, breaks = 30, main = "Stichprobenverteilung von beta1",
+     xlab = "Geschätzte Steigung", col = "lightblue", border = "white")
+abline(v = beta1, col = "red", lwd = 3) # Wahrer Wert
+text(beta1, 10, "Wahrer Wert", col = "red", pos = 4)
+
+# --- Visualisierung 2: Konfidenzintervalle (Coverage Plot) ---
+# Wir plotten nur die ersten 100 Simulationen für die Übersichtlichkeit [5].
+n_view = 100
+plot(1:n_view, beta1_estimates[1:n_view], ylim = c(min(ci_lower), max(ci_upper)),
+     pch = 20, xlab = "Simulation Nr.", ylab = "beta1 Schätzung & 95%-CI",
+     main = "95%-Konfidenzintervalle (erste 100 Durchläufe)")
+
+# Färbe Intervalle rot, wenn sie den wahren Wert NICHT enthalten [5].
+for (i in 1:n_view) {
+  covered = (beta1 >= ci_lower[i] & beta1 <= ci_upper[i])
+  color = ifelse(covered, "gray", "red")
+  segments(i, ci_lower[i], i, ci_upper[i], col = color, lwd = 2)
+}
+abline(h = beta1, col = "blue", lty = 2) # Horizontale Linie beim wahren Wert
+```

@@ -10,25 +10,26 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Exercise 1 (Probability Densities/ Expectations)
 
-Assume the following pdf: $$f(x) = \begin{cases}c\cdot a \quad 0 \le x \le 1 \\ 0 \quad \quad \text{otherwise} \end{cases}$$
+Nehmen wir folgende Wahrscheinlichkeitsdichtefunktion (probability density function PDF) an: $$f(x) = \begin{cases}c\cdot a \quad 0 \le x \le 1 \\ 0 \quad \quad \text{otherwise} \end{cases}$$
 
-a)  What is the value of the constant $c$?
+#### a) Wie groß ist der Wert der Konstante $c$?
 
 Eine Grundregel für Dichtefunktionen ist, dass die Gesamtfläche unter der Kurve (das Integral) immer 1 sein muss.
 
-Rechnerisch lässt sich dies also mit dem Integral für den gefragten Bereich lösen: $$\int_0^1 c \cdot x \space dx = 1 \rightarrow c \cdot [\frac{x^2}{2}]_0^1 = 1 \rightarrow \frac{c}{2} = 1 \rightarrow c = 2$$
+Rechnerisch lässt sich dies also mit dem Integral für den gefragten Bereich lösen:
+$$\int_0^1 c \cdot x \space dx = 1 \rightarrow c \cdot [\frac{x^2}{2}]_0^1 = 1 \rightarrow \frac{c}{2} = 1 \rightarrow c = 2$$
 
-b)  What is the probability that $x$ is in between 0 and 0.5?
+#### b)  Wie groß ist die Wahrscheinlichkeit, dass $x$ zwischen 0 und 0.5 liegt?
 
 Rechnerisch lässt sich dies mit den Informationen von Aufgabe a durch das einsezten er Integralsgrenzen wie folgt lösen: $$\int_0^{0.5} 2x \space dx = [x^2]_0^{0.5} = 0.5^2 = 0.25$$
 
-c)  What is the expectation $E(X)$?
+#### c)  Wie groß ist der Erwartungswert $E(X)$?
 
 Der Erwartungswert ist der „Massenschwerpunkt“ (center-of-mass) der Verteilung.
 
 Formel: $$E(X) = \int x \cdot f(x) \space dx$$ Rechnung: $$\int_0^1 x \cdot (2x)dx = \int_0^1 2x^2 \space dx = [\frac{2}{3} x^3]_0^1 = \frac{2}{3} \approx 0,667$$
 
-d)  What is the expectation $E(X^2)$?
+#### d)  Wie groß ist der Erwartungswert $E(X^2)$?
 
 Erwartungswert $E(X^2)$ (Optional)
 

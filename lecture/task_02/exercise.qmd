@@ -95,3 +95,5 @@ best_beta_1 = beta_1_values[min_index[2]]
 cat("Bestes beta_0:", best_beta_0, "\n")
 cat("Bestes beta_1:", best_beta_1, "\n")
 ```
+
+#### f: 

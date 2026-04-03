@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Nehmen Sie an, dass die Daten von einer Gauß- bzw. Normalverteilung stammen und wie folgt verteilt sind: $$Y \sim N(\mu, \sigma^2 = 1) $$ Für diese Aufgabe müssen Sie Beispiele aus einer Gaußverteilung zeichnen/ziehen. In R erfolgt dies mit `rnorm()`.
 
-a)  Nehmen Sie an, dass Daten aus einer Normalverteilung mit dem wahren Wert μ=42 und σ2=1 stammen. Man zieht eine kleine Stichprobe der Größe n=6 und berechnet daraus den Mittelwert (mean) und den Median.
+#### a) Nehmen Sie an, dass Daten aus einer Normalverteilung mit dem wahren Wert $\mu=42$ und $\sigma^2=1$ stammen. Man zieht eine kleine Stichprobe der Größe n=6 und berechnet daraus den Mittelwert (mean) und den Median.
 
 ```{r}
 a = rnorm(6, 42, 1)
@@ -22,7 +22,7 @@ mean_a
 median_a
 ```
 
-b)  Wiederholen Sie a) 10.000 mal, wie ist der Mittelwert (mean) verteilt. Nutzen Sie hierzu eine for-loop
+#### b) Wiederholen Sie a) 10.000 mal, wie ist der Mittelwert (mean) verteilt. Nutzen Sie hierzu eine for-loop
 
 ```{r}
 res_mean = numeric(10000)
@@ -40,7 +40,10 @@ plot(density(res_mean), col="blue", main="Sampling Distribution")
 lines(density(res_median), col="red")
 ```
 
-c)  Sampling Distribution: Die 10.000 berechneten Mittelwerte bilden eine eigene Verteilung. Unbiasedness: Ein Schätzer ist erwartungstreu (unbiased), wenn sein Durchschnitt über unendlich viele Stichproben dem wahren Wert entspricht. Ergebnis: Der Mittelwert ist für eine Normalverteilung ein erwartungstreuer Schätzer von μ, da die Verteilung der Schätzwerte im Durchschnitt genau bei 42 liegen wird
+#### c) Sampling Distribution
+Die 10.000 berechneten Mittelwerte bilden eine eigene Verteilung. 
+Unbiasedness: Ein Schätzer ist erwartungstreu (unbiased), wenn sein Durchschnitt über unendlich viele Stichproben dem wahren Wert entspricht. 
+Ergebnis: Der Mittelwert ist für eine Normalverteilung ein erwartungstreuer Schätzer von μ, da die Verteilung der Schätzwerte im Durchschnitt genau bei 42 liegen wird
 
 ```{r}
 # Plot der Dichte für den Mittelwert (Blau)
@@ -66,9 +69,14 @@ cat("Standardabweichung Mittelwert:", sd_mean, "\n")
 cat("Standardabweichung Median:", sd_median, "\n")
 ```
 
-Vergleich der Streuung: Du wirst im Plot sehen, dass beide Kurven um den wahren Wert 42 zentriert sind (beide sind unbiased/erwartungstreu). Die Kurve für den Mittelwert ist jedoch in der Regel "schmaler" und "höher" als die des Medians. Effizienz (Efficiency): Ein Schätzer ist effizienter, wenn die Streuung seiner Stichprobenverteilung kleiner ist. Da der Mittelwert bei einer Normalverteilung eine geringere Standardabweichung aufweist als der Median, liefert er präzisere Schätzungen. Fazit: Auf Grundlage der Ergebnisse würde man den Mittelwert bevorzugen, da er effizienter ist – die einzelnen Schätzwerte liegen im Durchschnitt näher am wahren Wert
+> Vergleich der Streuung:
+> Im Plot ist zu sehen, dass beide Kurven um den wahren Wert 42 zentriert sind (beide sind unbiased/erwartungstreu).
+> Die Kurve für den Mittelwert ist jedoch in der Regel "schmaler" und "höher" als die des Medians. 
+> Effizienz (Efficiency): Ein Schätzer ist effizienter, wenn die Streuung seiner Stichprobenverteilung kleiner ist.
+> Da der Mittelwert bei einer Normalverteilung eine geringere Standardabweichung aufweist als der Median, liefert er präzisere Schätzungen.
+> Fazit: Auf Grundlage der Ergebnisse würde man den Mittelwert bevorzugen, da er effizienter ist – die einzelnen Schätzwerte liegen im Durchschnitt näher am wahren Wert
 
-e)  Ist der Mittelwert (mean) ein konsistenter Schätzer? Verstehen Sie den Begriff "consistent estimator" zu verstehen. Erstellen Sie eine kleine Simmulation hierfür.
+#### e) Ist der Mittelwert (mean) ein konsistenter Schätzer? Verstehen Sie den Begriff "consistent estimator" zu verstehen. Erstellen Sie eine kleine Simmulation hierfür.
 
 ```{r}
 # Parameter

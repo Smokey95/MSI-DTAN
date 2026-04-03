@@ -1,0 +1,43 @@
+---
+title: "exercise_03"
+output: html_document
+date: "2026-03-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Excercise 3 
+
+Man verfügt oft über Stichproben aus der Wahrscheinlichkeitsdichtefunktion (ein Großteil der bayesschen Statistik im zweiten Teil basiert darauf). 
+Anstatt die Erwartungswerte einer Funktion $g(y)$ durch Integration über die Wahrscheinlichkeitsdichtefunktion (pdf) $f(y)$ zu berechnen,
+kann man die $n$−samples $y_i \sim f(y)$ verwenden und den Mittelwert berechnen:
+
+$$E(f(y)) ≈ \frac{1}{n} \sum_{i=1}^{n} f(y_i)$$
+
+Nehmen wir an, dass die Daten einer Standardnormalverteilung $y_i \sim N(0, 1)$ folgen.
+
+#### a) Schätze $E(y)$ anhand von $n = 1000$ Stichproben
+
+```{r}
+set.seed(123) # Für Reproduzierbarkeit
+n = 1000
+samples = rnorm(n, mean = 0, sd = 1)
+estimated_mean = mean(samples)
+estimated_mean
+```
+
+#### b) Schätze $E(y^2)$ unter Verwendung von $n = 1000$ Stichproben
+
+```{r}
+estimated_mean_squared = mean(samples^2)
+estimated_mean_squared
+```
+
+#### c) [Optional] Integration:
+Führe die Integration über das Wahrscheinlichkeitsdichtefunktion $N(y; 0, 1)$ einer Standardnormalverteilung durch (keine Lösung angegeben).
+Hinweis (wahrscheinlich reicht eine Teilintegration aus):
+$$E(y^2) = \int_{-\infty}^{\infty} y^2 N(y; 0, 1) dy$$
+
+```{r}

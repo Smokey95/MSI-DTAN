@@ -2,3 +2,17 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# Quarto stuff
+*.quarto
+*exercise_*_files
+*exercise_*files
+*_files
+
+# Exercise pdf output
+*exercise_*.pdf
+*exercise*.pdf
+*exercise_*.knit.md
+
+# Ignore that private stuff
+*.private.yml
