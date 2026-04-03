@@ -26,5 +26,26 @@ When using VS Code you need to install the R extension and the required packages
   - [Quarto VS Code Extension](https://marketplace.visualstudio.com/items?itemName=quarto.quarto) is required to render the R Markdown files in VS Code. You can install it by following the instructions on the Quarto website.
 - [Pandoc](https://pandoc.org/installing.html) is required to render the R Markdown files. You can install it by following the instructions on the Pandoc website.
 
+### pdf rendering
+To render the `.qmd` files to pdf a LaTeX distribution is required.
+
+Rendering will place relevant information like name and study-id to the pdf file which are not included in the `.qmd` file or the `.html` file. Therefore a `<name>.yml` file is required storing the information in the following format:
+
+```yaml
+author: "John Doe (123456)"
+```
+
+The `.qmd` file header then needs to include the following line to use the information from the `.yml` file:
+
+```
+format:
+  html:
+    author: ""
+  pdf: default
+
+metadata-files:
+  - ../../.private.yml
+```
+
 ## Content
 
