@@ -148,8 +148,11 @@ Y &amp;= 0.42 \cdot X + 0.5 \cdot Z + UY
 \]</span></p>
 <p>wobei <span class="math inline">\(U_X \sim N(0, 1), U_Z \sim N(0, 1)\)</span> und <span class="math inline">\(U_Y \sim N(0, 1)\)</span> unabhängig voneinander sind</p>
 <section id="a-simulation" class="level2">
-<h2 class="anchored" data-anchor-id="a-simulation">a: Simulation</h2>
+<h2 class="anchored" data-anchor-id="a-simulation">a) Simulation</h2>
 <p>Simulieren Sie Daten aus dem linearen SCM mit Gaußschem Rauschen. Solche Modelle werden auch als Strukturgleichungsmodelle (SEM) bezeichnet.</p>
+<blockquote class="blockquote">
+<p><strong>Konzept</strong>: Z ist ein Confounder: er verursacht sowohl X als auch Y. Wenn wir nur Y ~ X regressieren, messen wir nicht den echten kausalen Effekt, weil ein Teil der Korrelation über Z läuft (Scheinkorrelation). Der wahre kausale Effekt von X auf Y ist direkt aus der SCM ablesbar: 0.42.</p>
+</blockquote>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>UX <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(N, <span class="dv">0</span>, <span class="dv">1</span>)</span>
@@ -161,7 +164,7 @@ Y &amp;= 0.42 \cdot X + 0.5 \cdot Z + UY
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="fl">0.42</span> <span class="sc">*</span> X <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> Z <span class="sc">+</span> UY</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(Y)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.01338446</code></pre>
+<pre><code>[1] 0.03873648</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(X, Y, <span class="at">col =</span> <span class="fu">ifelse</span>(Z <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"red"</span>, <span class="st">"blue"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
@@ -174,8 +177,8 @@ Y &amp;= 0.42 \cdot X + 0.5 \cdot Z + UY
 </div>
 </section>
 <section id="b-ändern-von-x-um-eine-einheit" class="level2">
-<h2 class="anchored" data-anchor-id="b-ändern-von-x-um-eine-einheit">b: Ändern von X um eine Einheit</h2>
-<p>Was passiert (im Durchschnitt) mit Y, wenn man X um eine Einheit verändert? Verwende dieselben exogenen Variablen, die du für die Simulation <a href="#a">a:</a> verwendet hast.</p>
+<h2 class="anchored" data-anchor-id="b-ändern-von-x-um-eine-einheit">b) Ändern von X um eine Einheit</h2>
+<p>Was passiert (im Durchschnitt) mit Y, wenn man X um eine Einheit verändert? Verwende dieselben exogenen Variablen, die für die Simulation <a href="#a">a:</a> verwendet wurde.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ändere X um eine Einheit</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>X_new <span class="ot">&lt;-</span> X <span class="sc">+</span> <span class="dv">1</span></span>
@@ -194,11 +197,11 @@ Y &amp;= 0.42 \cdot X + 0.5 \cdot Z + UY
 </div>
 </div>
 <blockquote class="blockquote">
-<p>Antwort: Die Veränderung von X um eine Einheit führt im Durchschnitt zu einer Veränderung von Y um 0.42 Einheiten, da der Koeffizient von X in der Gleichung für Y 0.42 beträgt. Das bedeutet, dass eine Erhöhung von X um 1 zu einer durchschnittlichen Erhöhung von Y um 0.42 führt, unabhängig von den Werten von Z und den Störfaktoren UY.</p>
+<p>Antwort: Die Veränderung von X um eine Einheit führt im Durchschnitt zu einer Veränderung von Y um 0.42 Einheiten, da der Koeffizient von X in der Gleichung für Y 0.42 beträgt (<em>direkter Effekt</em>). Das bedeutet, dass eine Erhöhung von X um 1 zu einer durchschnittlichen Erhöhung von Y um 0.42 führt, unabhängig von den Werten von Z und den Störfaktoren UY.</p>
 </blockquote>
 </section>
-<section id="c-änder-von-y-um-eine-einheit" class="level2">
-<h2 class="anchored" data-anchor-id="c-änder-von-y-um-eine-einheit">c: Änder von Y um eine Einheit</h2>
+<section id="c-intervention-vs.-beobachtung" class="level2">
+<h2 class="anchored" data-anchor-id="c-intervention-vs.-beobachtung">c) Intervention vs.&nbsp;Beobachtung</h2>
 <p>Was passiert (im Durchschnitt) mit <span class="math inline">\(Y\)</span>, wenn man zunächst <span class="math inline">\(X\)</span> auf 0 setzt und es dann auf 1 ändert? Verwenden Sie auch hier wieder die gleichen exogenen Variablen wie in der Simulation unter <a href="#a">a:</a>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Setze X auf 0 und berechne Y</span></span>
@@ -215,8 +218,52 @@ Y &amp;= 0.42 \cdot X + 0.5 \cdot Z + UY
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co"># This is a property of the linear "wonder land"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <blockquote class="blockquote">
-<p>Antwort: Die Veränderung von Y, wenn man X von 0 auf 1 ändert, führt im Durchschnitt zu einer Veränderung von Y um 0.42 Einheiten, da der Koeffizient von X in der Gleichung für Y 0.42 beträgt. Das bedeutet, dass eine Erhöhung von X von 0 auf 1 zu einer durchschnittlichen Erhöhung von Y um 0.42 führt, unabhängig von den Werten von Z und den Störfaktoren UY. In einem linearen Modell hängt die Veränderung von Y nur vom Koeffizienten von X ab und nicht vom aktuellen Wert von X, was eine besondere Eigenschaft linearer Modelle ist.</p>
+<p>Antwort: Der Kern des Unterschied zwischen 1b) und 1c) liegt in der Art der Veränderung von X. In 1b) wird X um eine Einheit verändert, wobei Z und X weiterhin korelliert sind. Es wird also weiterhin der direkte Effekt von X auf Y gemessen, der durch die Korrelation zwischen X und Z beeinflusst wird.</p>
+<p>In 1c) hingegen wird X auf feste Werte (0 und 1) gesetzt, was einer <strong>aktiven Intervention</strong> entspricht. Hier wird der kausale Effekt von X auf Y direkt gemessen, da die Korrelation zwischen X und Z durch die Intervention aufgehoben wird. In diesem Fall führt eine Änderung von X von 0 auf 1 zu einer durchschnittlichen Veränderung von Y um 0.42 Einheiten, was dem direkten Effekt von X auf Y entspricht.</p>
+<pre><code># do(X=0):  X wird auf 0 gezwungen, egal was Z sagt
+Y_do0 = 0.42 * 0 + 0.5*Z + UY
+
+# do(X=1):  X wird auf 1 gezwungen, egal was Z sagt  
+Y_do1 = 0.42 * 1 + 0.5*Z + UY</code></pre>
 </blockquote>
+</section>
+<section id="d-lineare-regression" class="level2">
+<h2 class="anchored" data-anchor-id="d-lineare-regression">d) Lineare Regression</h2>
+<p>Führen Sie anhand der Daten eine lineare Regression durch. Welche Parameter müssen Sie einbeziehen, um den kausalen Effekt von x auf y zu ermitteln? Wie lautet der tatsächliche kausale Effekt? Verwenden Sie Konfidenzintervalle (confint).</p>
+<p>Der Effekt von einem nicht kontrollierten Confounder wird hier im ersten Schritt aufgezeigt indem nur X als Prädiktor in der Regression verwendet wird.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>model_without_Z <span class="ot">&lt;-</span> <span class="fu">lm</span>(Y <span class="sc">~</span> X)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(model_without_Z)<span class="sc">$</span>coefficients)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Estimate Std. Error    t value     Pr(&gt;|t|)
+(Intercept) 0.0236047 0.03416598  0.6908831 4.897997e-01
+X           0.6419105 0.02747385 23.3644210 1.182886e-96</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">confint</span>(model_without_Z, <span class="st">"X"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>      2.5 %    97.5 %
+X 0.5879974 0.6958237</code></pre>
+</div>
+</div>
+<blockquote class="blockquote">
+<p>Antwort: Wenn wir nur X als Prädiktor in der Regression verwenden, erhalten wir einen geschätzten Effekt von X auf Y, der durch die Korrelation zwischen X und Z verzerrt ist (Scheinkorrelation).</p>
+</blockquote>
+<p>Um den kausalen Effekt von X auf Y zu ermitteln, müssen wir Z als Kontrollvariable in die Regression einbeziehen, da Z ein Confounder ist, der sowohl X als auch Y beeinflusst.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>model_with_Z <span class="ot">&lt;-</span> <span class="fu">lm</span>(Y <span class="sc">~</span> X <span class="sc">+</span> Z)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(model_with_Z)<span class="sc">$</span>coefficients)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>              Estimate Std. Error   t value     Pr(&gt;|t|)
+(Intercept) 0.04495872 0.03131592  1.435651 1.514154e-01
+X           0.39403414 0.03081700 12.786258 8.944309e-35
+Z           0.53484769 0.03842163 13.920483 2.198285e-40</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">confint</span>(model_with_Z, <span class="st">"X"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>      2.5 %    97.5 %
+X 0.3335605 0.4545078</code></pre>
+</div>
+</div>
 </section>
 </section>
 

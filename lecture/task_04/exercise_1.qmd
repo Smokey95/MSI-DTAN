@@ -20,8 +20,10 @@ $$
 
 wobei $U_X \sim N(0, 1), U_Z \sim N(0, 1)$ und $U_Y \sim N(0, 1)$ unabhängig voneinander sind
 
-## a: Simulation
+## a) Simulation
 Simulieren Sie Daten aus dem linearen SCM mit Gaußschem Rauschen. Solche Modelle werden auch als Strukturgleichungsmodelle (SEM) bezeichnet.
+
+> **Konzept**: Z ist ein Confounder: er verursacht sowohl X als auch Y. Wenn wir nur Y ~ X regressieren, messen wir nicht den echten kausalen Effekt, weil ein Teil der Korrelation über Z läuft (Scheinkorrelation). Der wahre kausale Effekt von X auf Y ist direkt aus der SCM ablesbar: 0.42.
 
 ```{r}
 N <- 1000
@@ -36,9 +38,8 @@ mean(Y)
 plot(X, Y, col = ifelse(Z > 0, "red", "blue"))
 ```
 
-## b: Ändern von X um eine Einheit
-Was passiert (im Durchschnitt) mit Y, wenn man X um eine Einheit verändert? Verwende dieselben exogenen Variablen,
-die du für die Simulation [a:](#a) verwendet hast.
+## b) Ändern von X um eine Einheit
+Was passiert (im Durchschnitt) mit Y, wenn man X um eine Einheit verändert? Verwende dieselben exogenen Variablen, die für die Simulation [a:](#a) verwendet wurde.
 ```{r}
 # Ändere X um eine Einheit
 X_new <- X + 1
@@ -47,9 +48,9 @@ mean(Y_new - Y)
 plot(X_new, Y_new, col = ifelse(Z > 0, "red", "blue"))
 ```
 
-> Antwort: Die Veränderung von X um eine Einheit führt im Durchschnitt zu einer Veränderung von Y um 0.42 Einheiten, da der Koeffizient von X in der Gleichung für Y 0.42 beträgt. Das bedeutet, dass eine Erhöhung von X um 1 zu einer durchschnittlichen Erhöhung von Y um 0.42 führt, unabhängig von den Werten von Z und den Störfaktoren UY.
+> Antwort: Die Veränderung von X um eine Einheit führt im Durchschnitt zu einer Veränderung von Y um 0.42 Einheiten, da der Koeffizient von X in der Gleichung für Y 0.42 beträgt (*direkter Effekt*). Das bedeutet, dass eine Erhöhung von X um 1 zu einer durchschnittlichen Erhöhung von Y um 0.42 führt, unabhängig von den Werten von Z und den Störfaktoren UY.
 
-## c: Änder von Y um eine Einheit
+## c) Intervention vs. Beobachtung
 Was passiert (im Durchschnitt) mit $Y$, wenn man zunächst $X$ auf 0 setzt und es dann auf 1 ändert? Verwenden Sie auch hier wieder die gleichen exogenen Variablen wie in der Simulation unter [a:](#a).
 ```{r}
 # Setze X auf 0 und berechne Y
@@ -63,4 +64,35 @@ mean(Y_one - Y_zero)
 # This is a property of the linear "wonder land"
 ```
 
-> Antwort: Die Veränderung von Y, wenn man X von 0 auf 1 ändert, führt im Durchschnitt zu einer Veränderung von Y um 0.42 Einheiten, da der Koeffizient von X in der Gleichung für Y 0.42 beträgt. Das bedeutet, dass eine Erhöhung von X von 0 auf 1 zu einer durchschnittlichen Erhöhung von Y um 0.42 führt, unabhängig von den Werten von Z und den Störfaktoren UY. In einem linearen Modell hängt die Veränderung von Y nur vom Koeffizienten von X ab und nicht vom aktuellen Wert von X, was eine besondere Eigenschaft linearer Modelle ist.
+> Antwort: Der Kern des Unterschied zwischen 1b) und 1c) liegt in der Art der Veränderung von X. In 1b) wird X um eine Einheit verändert, wobei Z und X weiterhin korelliert sind. Es wird also weiterhin der direkte Effekt von X auf Y gemessen, der durch die Korrelation zwischen X und Z beeinflusst wird.
+>
+> In 1c) hingegen wird X auf feste Werte (0 und 1) gesetzt, was einer **aktiven Intervention** entspricht. Hier wird der kausale Effekt von X auf Y direkt gemessen, da die Korrelation zwischen X und Z durch die Intervention aufgehoben wird. In diesem Fall führt eine Änderung von X von 0 auf 1 zu einer durchschnittlichen Veränderung von Y um 0.42 Einheiten, was dem direkten Effekt von X auf Y entspricht.
+> 
+>```
+># do(X=0):  X wird auf 0 gezwungen, egal was Z sagt
+>Y_do0 = 0.42 * 0 + 0.5*Z + UY
+>
+># do(X=1):  X wird auf 1 gezwungen, egal was Z sagt  
+>Y_do1 = 0.42 * 1 + 0.5*Z + UY
+>```
+
+## d) Lineare Regression
+Führen Sie anhand der Daten eine lineare Regression durch. Welche Parameter müssen Sie einbeziehen, um den kausalen Effekt von x auf y zu ermitteln? Wie lautet der tatsächliche kausale Effekt? Verwenden Sie Konfidenzintervalle (confint).
+
+Der Effekt von einem nicht kontrollierten Confounder wird hier im ersten Schritt aufgezeigt indem nur X als Prädiktor in der Regression verwendet wird. 
+
+```{r}
+model_without_Z <- lm(Y ~ X)
+print(summary(model_without_Z)$coefficients)
+print(confint(model_without_Z, "X"))
+```
+
+> Antwort: Wenn wir nur X als Prädiktor in der Regression verwenden, erhalten wir einen geschätzten Effekt von X auf Y, der durch die Korrelation zwischen X und Z verzerrt ist (Scheinkorrelation).
+
+Um den kausalen Effekt von X auf Y zu ermitteln, müssen wir Z als Kontrollvariable in die Regression einbeziehen, da Z ein Confounder ist, der sowohl X als auch Y beeinflusst.
+
+```{r}
+model_with_Z <- lm(Y ~ X + Z)
+print(summary(model_with_Z)$coefficients)
+print(confint(model_with_Z, "X"))
+```
