@@ -8,7 +8,7 @@
 
 <meta name="dcterms.date" content="2026-04-08">
 
-<title>exercise_02</title>
+<title>exercise_03</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -62,17 +62,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="exercise_2_files/libs/clipboard/clipboard.min.js"></script>
-<script src="exercise_2_files/libs/quarto-html/quarto.js" type="module"></script>
-<script src="exercise_2_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="exercise_2_files/libs/quarto-html/popper.min.js"></script>
-<script src="exercise_2_files/libs/quarto-html/tippy.umd.min.js"></script>
-<script src="exercise_2_files/libs/quarto-html/anchor.min.js"></script>
-<link href="exercise_2_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="exercise_2_files/libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="exercise_2_files/libs/bootstrap/bootstrap.min.js"></script>
-<link href="exercise_2_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="exercise_2_files/libs/bootstrap/bootstrap-efbb37e9afcc02144ebbc7afd12a776f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="exercise_3_files/libs/clipboard/clipboard.min.js"></script>
+<script src="exercise_3_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="exercise_3_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="exercise_3_files/libs/quarto-html/popper.min.js"></script>
+<script src="exercise_3_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="exercise_3_files/libs/quarto-html/anchor.min.js"></script>
+<link href="exercise_3_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="exercise_3_files/libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="exercise_3_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="exercise_3_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="exercise_3_files/libs/bootstrap/bootstrap-efbb37e9afcc02144ebbc7afd12a776f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
   <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
@@ -114,7 +114,7 @@ window.Quarto = {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">exercise_02</h1>
+<h1 class="title">exercise_03</h1>
 </div>
 
 
@@ -137,75 +137,68 @@ window.Quarto = {
 </header>
 
 
-<section id="aufgabe-2-pipe-mediator" class="level1">
-<h1>Aufgabe 2: Pipe (Mediator)</h1>
+<section id="aufgabe-3-collider" class="level1">
+<h1>Aufgabe 3: Collider</h1>
 <p>Strukturgleichungsmodell: <span class="math display">\[
 \begin{aligned}
 X &amp;= \epsilon X \\
-Z &amp;= 2 \cdot X + \epsilon Z \\
-Y &amp;= 0.5 \cdot Z + \epsilon Y
+Y &amp;= 0.7 \cdot X + \epsilon Y \\
+Z &amp;= 0.8 \cdot X + 0.5 \cdot Y + \epsilon Z
 \end{aligned}
-\]</span> wobei <span class="math inline">\(\epsilon_X \sim N(0, 1), \epsilon_Z \sim N(0, 1), \epsilon_Y \sim N(0, 1)\)</span> unabhängig voneinander sind</p>
+\]</span> wobei <span class="math inline">\(\epsilon_X \sim N(0, 1), \epsilon_Y \sim N(0, 1), \epsilon_Z \sim N(0, 1)\)</span> unabhängig voneinander sind</p>
+<section id="a-kausaler-effekt-von-x-auf-y" class="level2">
+<h2 class="anchored" data-anchor-id="a-kausaler-effekt-von-x-auf-y">a) Kausaler Effekt von X auf Y</h2>
+<p>Wie groß ist der kausale Effekt von <span class="math inline">\(X\)</span> auf <span class="math inline">\(Y\)</span>?</p>
 <blockquote class="blockquote">
-<p><strong>Konzept</strong>: X → Z → Y ist eine Pipe (Mediationskette). Z ist kein Confounder, sondern ein Mediator. Der kausale Effekt von X auf Y läuft vollständig durch Z. - Totaler kausaler Effekt von X auf Y: X→Z mit Koeffizient 2, Z→Y mit 0.5 → 2 × 0.5 = 1.0 - Direkter kausaler Effekt von X auf Y: 0 (kein direkter Pfeil X→Y)</p>
-</blockquote>
-<section id="a-direkter-kausal--und-gesamteffekt" class="level2">
-<h2 class="anchored" data-anchor-id="a-direkter-kausal--und-gesamteffekt">a) Direkter Kausal- und Gesamteffekt</h2>
-<p>Wie groß ist der gesamte kausale Effekt von <span class="math inline">\(X\)</span> auf <span class="math inline">\(Y\)</span>? Wie groß ist der direkte kausale Effekt von <span class="math inline">\(X\)</span> auf <span class="math inline">\(Y\)</span>? Entnehmen Sie dies bitte dem Diagramm bzw. dem Strukturgleichungsmodell.</p>
-<blockquote class="blockquote">
-<p>Antwort: Der gesamte kausale Effekt von X auf Y beträgt 1, da X über Z auf Y wirkt. <span class="math display">\[ \text{Gesamteffekt} = \text{Effekt von X auf Z} \times \text{Effekt von Z auf Y} = 2 \times 0.5 = 1 \]</span> Der direkte kausale Effekt von X auf Y beträgt 0, da es keinen direkten Pfad von X zu Y gibt.</p>
+<p>Der kausale Effekt von X auf Y lässt sich direkt aus dem SCM ablesen: <span class="math inline">\(Y = 0.7 \cdot X + \epsilon_Y\)</span>. Es gibt nur einen direkten Pfeil X→Y, kein anderer Pfad von X nach Y existiert. Also:</p>
+<p>Wahrer kausaler Effekt = 0.7</p>
+<p>Z spielt dabei keine Rolle – es ist eine Folge, keine Ursache.</p>
 </blockquote>
 </section>
 <section id="b-simulation" class="level2">
-<h2 class="anchored" data-anchor-id="b-simulation">b: Simulation</h2>
-<p>Simuliere <code>n = 1000</code> Datenpunkte. Führe dann einmal eine einfache Regression durch, bei der <span class="math inline">\(X\)</span> der einzige Prädiktor ist, und einmal eine multiple lineare Regression, bei der du zusätzlich für <span class="math inline">\(Z\)</span> kontrollierst. In welchem der angepassten Regressionsmodelle liegt der wahre kausale Effekt innerhalb des Konfidenzintervalls des Effekts von <span class="math inline">\(X\)</span>?</p>
+<h2 class="anchored" data-anchor-id="b-simulation">b) Simulation</h2>
+<p>Simulieren Sie <code>n = 1000</code> Datenpunkte. Führen Sie dann einmal eine einfache Regression durch, bei der X der einzige Prädiktor ist, und einmal eine multiple lineare Regression, bei der Sie zusätzlich für Z kontrollieren. In welchem der angepassten Regressionsmodelle liegt der wahre kausale Effekt innerhalb des Konfidenzintervalls des Effekts von X?</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>epsilon_X <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, <span class="dv">1</span>)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>epsilon_Z <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, <span class="dv">1</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>epsilon_Y <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>epsilon_Y <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>epsilon_Z <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, <span class="dv">1</span>)</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> epsilon_X</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="dv">2</span> <span class="sc">*</span> X <span class="sc">+</span> epsilon_Z</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="fl">0.5</span> <span class="sc">*</span> Z <span class="sc">+</span> epsilon_Y</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="fl">0.7</span> <span class="sc">*</span> X <span class="sc">+</span> epsilon_Y</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fl">0.8</span> <span class="sc">*</span> X <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> Y <span class="sc">+</span> epsilon_Z</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Einfache Regression</span></span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>model_simple <span class="ot">&lt;-</span> <span class="fu">lm</span>(Y <span class="sc">~</span> X)</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(model_simple)<span class="sc">$</span>coefficients)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>               Estimate Std. Error     t value      Pr(&gt;|t|)
-(Intercept) 0.002844641 0.03400966  0.08364216  9.333577e-01
-X           1.001007783 0.03567149 28.06184209 3.322442e-128</code></pre>
+<pre><code>              Estimate Std. Error    t value     Pr(&gt;|t|)
+(Intercept) 0.01183552 0.03199788  0.3698847 7.115469e-01
+X           0.68751560 0.03156224 21.7828547 2.264010e-86</code></pre>
 </div>
 </div>
-<blockquote class="blockquote">
-<p>Bei dem einfachen Modell wird Z nicht kontrolliert (nicht im Modell enthalten)</p>
-</blockquote>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Multiple Regression</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>model_multiple <span class="ot">&lt;-</span> <span class="fu">lm</span>(Y <span class="sc">~</span> X <span class="sc">+</span> Z)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(model_multiple)<span class="sc">$</span>coefficients)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>               Estimate Std. Error    t value     Pr(&gt;|t|)
-(Intercept) 0.006120804 0.03071907  0.1992509 8.421071e-01
-X           0.047595120 0.07109480  0.6694600 5.033571e-01
-Z           0.478150463 0.03178348 15.0439949 3.002543e-46</code></pre>
+<pre><code>              Estimate Std. Error    t value     Pr(&gt;|t|)
+(Intercept) 0.01401874 0.02905657  0.4824636 6.295826e-01
+X           0.25069967 0.04142405  6.0520317 2.022019e-09
+Z           0.38894580 0.02663092 14.6050441 6.360201e-44</code></pre>
 </div>
 </div>
-<blockquote class="blockquote">
-<p>Bei dem multiplen Modell wird Z kontrolliert (im Modell enthalten)</p>
-</blockquote>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Konfidenzintervall für den Effekt von X in beiden Modellen</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">confint</span>(model_simple, <span class="st">"X"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>     2.5 %   97.5 %
-X 0.931008 1.071008</code></pre>
+<pre><code>      2.5 %    97.5 %
+X 0.6255796 0.7494516</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">confint</span>(model_multiple, <span class="st">"X"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>        2.5 %    97.5 %
-X -0.09191749 0.1871077</code></pre>
+<pre><code>      2.5 %   97.5 %
+X 0.1694113 0.331988</code></pre>
 </div>
 </div>
 </section>
@@ -213,12 +206,9 @@ X -0.09191749 0.1871077</code></pre>
 <h2 class="anchored" data-anchor-id="c-schlussfolgerung">c) Schlussfolgerung</h2>
 <p>Was ist die Schlussfolgerung?</p>
 <blockquote class="blockquote">
-<p>Die Schlussfolgerung ist, dass die kontrolle von Z in einer Pipe wie hier (X → Z → Y) den wahren kausalen Effekt von X auf Y verdeckt da der einzige Weg wie X auf Y wirkt über Z läuft.</p>
-<p>Wenn wir <code>lm(Y ~ X + Z)</code> durchführen, sagen wir der Regression quasi “Schau dir an, wie X und Y zusammenhängen, bei festgehaltenem Z.” Aber wenn Z festgehalten wird, ist der einzige Kanal von X zu Y blockiert. Die Regression “sieht” dann keinen Effekt von X auf Y mehr – obwohl er real existiert, er läuft nur durch Z.</p>
-<p>Dies lässt sich auch einfach mit einer Wasserleitung vergleichen: <span class="math inline">\(X \rightarrow Z \rightarrow Y\)</span> Wenn wir Z kontrollieren, halten wir den Wasserstand in der Mitte fest. Dann können wir X verändern wie wir wollen – Y verändert sich nicht, weil das zweite Rohr “abgesperrt” ist. Wir messen also fälschlicherweise keinen Effekt.</p>
-</blockquote>
-<blockquote class="blockquote">
-<p>Zusammengefasst: Bei der Pipe gilt: Z nicht ins Modell aufnehmen, weil Z der Mechanismus ist, durch den X überhaupt wirkt. Nimmst du Z trotzdem auf, blockierst du diesen Mechanismus und der Effekt von X “verschwindet” künstlich aus der Regression.</p>
+<p>Die Schlussfolgerung ist, dass die Kontrolle von Z in diesem Fall den wahren kausalen Effekt von X auf Y verzerrt, da Z ein Collider ist. Das ist das Berkson’s Paradox (auch Collider-Bias genannt). Wenn wir auf Z konditionieren, passiert folgendes:</p>
+<p>Stell dir vor, du weißt den Wert von Z. Dann gilt: “Wenn Z einen bestimmten Wert hat, und ich weiß dass X groß ist, dann muss Y kleiner sein” – weil Z = 0.8<em>X + 0.5</em>Y + eZ.</p>
+<p>Das konditionieren auf Z erzeugt eine künstliche negative Abhängigkeit zwischen X und Y, die in Wirklichkeit nicht existiert. Die Regression “sieht” dadurch einen kleineren Effekt als 0.7.</p>
 </blockquote>
 </section>
 </section>

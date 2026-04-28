@@ -8,7 +8,7 @@ date: "2026-04-08"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Aufgabe 2: Pipe
+# Aufgabe 2: Pipe (Mediator)
 
 Strukturgleichungsmodell:
 $$
@@ -20,8 +20,12 @@ Y &= 0.5 \cdot Z + \epsilon Y
 $$
 wobei $\epsilon_X \sim N(0, 1), \epsilon_Z \sim N(0, 1), \epsilon_Y \sim N(0, 1)$ unabhängig voneinander sind
 
-## a
-Wie groß ist der gesamte kausale Effekt von $X$ auf $Y$? Wie groß ist der direkte kausale Effekt von $X$ auf $? Entnehmen Sie dies bitte dem Diagramm bzw. dem Strukturgleichungsmodell.
+> **Konzept**: X → Z → Y ist eine Pipe (Mediationskette). Z ist kein Confounder, sondern ein Mediator. Der kausale Effekt von X auf Y läuft vollständig durch Z.
+> - Totaler kausaler Effekt von X auf Y: X→Z mit Koeffizient 2, Z→Y mit 0.5 → 2 × 0.5 = 1.0
+> - Direkter kausaler Effekt von X auf Y: 0 (kein direkter Pfeil X→Y)
+
+## a) Direkter Kausal- und Gesamteffekt
+Wie groß ist der gesamte kausale Effekt von $X$ auf $Y$? Wie groß ist der direkte kausale Effekt von $X$ auf $Y$? Entnehmen Sie dies bitte dem Diagramm bzw. dem Strukturgleichungsmodell.
 
 > Antwort: Der gesamte kausale Effekt von X auf Y beträgt 1, da X über Z auf Y wirkt.
 > $$ \text{Gesamteffekt} = \text{Effekt von X auf Z} \times \text{Effekt von Z auf Y} = 2 \times 0.5 = 1 $$
@@ -36,16 +40,42 @@ n <- 1000
 epsilon_X <- rnorm(n, 0, 1)
 epsilon_Z <- rnorm(n, 0, 1)
 epsilon_Y <- rnorm(n, 0, 1)
+
 X <- epsilon_X
 Z <- 2 * X + epsilon_Z
 Y <- 0.5 * Z + epsilon_Y
+
 # Einfache Regression
 model_simple <- lm(Y ~ X)
-summary(model_simple)
+print(summary(model_simple)$coefficients)
+```
+
+> Bei dem einfachen Modell wird Z nicht kontrolliert (nicht im Modell enthalten)
+
+```{r}
 # Multiple Regression
 model_multiple <- lm(Y ~ X + Z)
-summary(model_multiple)
+print(summary(model_multiple)$coefficients)
+```
+
+> Bei dem multiplen Modell wird Z kontrolliert (im Modell enthalten)
+
+```{r}
 # Konfidenzintervall für den Effekt von X in beiden Modellen
 confint(model_simple, "X")
 confint(model_multiple, "X")
 ```
+
+## c) Schlussfolgerung
+Was ist die Schlussfolgerung?
+
+> Die Schlussfolgerung ist, dass die kontrolle von Z in einer Pipe wie hier (X → Z → Y) den wahren kausalen Effekt von X auf Y verdeckt da der einzige Weg wie X auf Y wirkt über Z läuft.
+>
+> Wenn wir `lm(Y ~ X + Z)` durchführen, sagen wir der Regression quasi "Schau dir an, wie X und Y zusammenhängen, bei festgehaltenem Z."
+> Aber wenn Z festgehalten wird, ist der einzige Kanal von X zu Y blockiert. Die Regression "sieht" dann keinen Effekt von X auf Y mehr – obwohl er real existiert, er läuft nur durch Z.
+>
+> Dies lässt sich auch einfach mit einer Wasserleitung vergleichen:
+> $X \rightarrow Z \rightarrow Y$
+> Wenn wir Z kontrollieren, halten wir den Wasserstand in der Mitte fest. Dann können wir X verändern wie wir wollen – Y verändert sich nicht, weil das zweite Rohr "abgesperrt" ist. Wir messen also fälschlicherweise keinen Effekt.
+
+> Zusammengefasst: Bei der Pipe gilt: Z nicht ins Modell aufnehmen, weil Z der Mechanismus ist, durch den X überhaupt wirkt. Nimmst du Z trotzdem auf, blockierst du diesen Mechanismus und der Effekt von X "verschwindet" künstlich aus der Regression.

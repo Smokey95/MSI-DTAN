@@ -1,0 +1,72 @@
+---
+title: "exercise_03"
+output: html_document
+date: "2026-04-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aufgabe 3: Collider
+Strukturgleichungsmodell:
+$$
+\begin{aligned}
+X &= \epsilon X \\
+Y &= 0.7 \cdot X + \epsilon Y \\
+Z &= 0.8 \cdot X + 0.5 \cdot Y + \epsilon Z
+\end{aligned}
+$$
+wobei $\epsilon_X \sim N(0, 1), \epsilon_Y \sim N(0, 1), \epsilon_Z \sim N(0, 1)$ unabhängig voneinander sind
+
+## a) Kausaler Effekt von X auf Y
+Wie groß ist der kausale Effekt von $X$ auf $Y$?
+
+> Der kausale Effekt von X auf Y lässt sich direkt aus dem SCM ablesen: $Y = 0.7 \cdot X + \epsilon_Y$.
+> Es gibt nur einen direkten Pfeil X→Y, kein anderer Pfad von X nach Y existiert. Also:
+>
+> Wahrer kausaler Effekt = 0.7
+>
+> Z spielt dabei keine Rolle – es ist eine Folge, keine Ursache.
+
+## b) Simulation
+Simulieren Sie `n = 1000` Datenpunkte. Führen Sie dann einmal eine einfache Regression durch, bei der X der einzige Prädiktor ist, und einmal eine multiple lineare Regression, bei der Sie zusätzlich für Z kontrollieren. In welchem der
+angepassten Regressionsmodelle liegt der wahre kausale Effekt innerhalb des Konfidenzintervalls des Effekts von X?
+
+```{r}
+n <- 1000
+epsilon_X <- rnorm(n, 0, 1)
+epsilon_Y <- rnorm(n, 0, 1)
+epsilon_Z <- rnorm(n, 0, 1)
+
+X <- epsilon_X
+Y <- 0.7 * X + epsilon_Y
+Z <- 0.8 * X + 0.5 * Y + epsilon_Z
+
+# Einfache Regression
+model_simple <- lm(Y ~ X)
+print(summary(model_simple)$coefficients)
+```
+
+```{r}
+# Multiple Regression
+model_multiple <- lm(Y ~ X + Z)
+print(summary(model_multiple)$coefficients)
+```
+
+```{r}
+# Konfidenzintervall für den Effekt von X in beiden Modellen
+confint(model_simple, "X")
+confint(model_multiple, "X")
+```
+
+## c) Schlussfolgerung
+Was ist die Schlussfolgerung?
+
+> Die Schlussfolgerung ist, dass die Kontrolle von Z in diesem Fall den wahren kausalen Effekt von X auf Y verzerrt, da Z ein Collider ist.
+> Das ist das Berkson's Paradox (auch Collider-Bias genannt). Wenn wir auf Z konditionieren, passiert folgendes:
+>
+>Stell dir vor, du weißt den Wert von Z. Dann gilt:
+> "Wenn Z einen bestimmten Wert hat, und ich weiß dass X groß ist, dann muss Y kleiner sein" – weil Z = 0.8*X + 0.5*Y + eZ.
+>
+>Das konditionieren auf Z erzeugt eine künstliche negative Abhängigkeit zwischen X und Y, die in Wirklichkeit nicht existiert. Die Regression "sieht" dadurch einen kleineren Effekt als 0.7.
