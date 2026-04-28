@@ -1,0 +1,62 @@
+---
+title: "exercise"
+output: html_document
+date: "2026-03-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+N <- 1000
+Z <- sample(c(0,1), N, replace = TRUE)
+S <- ifelse(Z == 1, rnorm(N, 44, 3), rnorm(N, 40, 3))
+Y <- ifelse(Z == 1, rnorm(N, 4000, 500), rnorm(N, 3500, 500))
+plot(S, Y, col = Z + 1)
+```
+
+```{r}
+# Trick
+x1 = rnorm(1000, mean=42, sd=2.1)
+hist(x1, 100)
+mean(x1)
+sd(x1)
+
+u = rnorm(1000, mean=0, sd=1) #Standard normal error term
+
+x2 =42+ 2.1 * u
+hist(x2, 100)
+mean(x2)
+sd(x2)
+# SCM
+# Randomness at beginning
+Uz = sample(c(0,1), N, replace = TRUE)
+Us = rnorm(N, 0, 1)
+Uy = rnorm(N, 0, 1)
+
+Z = Uz
+S = ifelse(Z == 1, 44 + 2.1 * Us, 40 + 2.1 * Us)
+Y = ifelse(Z == 1, 4000 + 500 * Uy, 3500 + 500 * Uy)
+plot(S, Y, col = Z + 1)
+```
+
+### Example of Lecture 4 Page 67
+```{r}
+N <- 1000 #Number of Samples
+#Alternatively
+## All Randomness in U
+UZ <- sample(c(0,1), size=N, replace = TRUE)
+US <- rnorm(N, 0, 1)
+UY <- rnorm(N, 0, 1)
+# All is deterministic from here
+Z <- UZ
+S <- (1-Z) * (44 + 3*US) + Z * (40 + 3*US)
+Y <- (1-Z) * (4000 + 500*UY) + Z * (3500 + 500)*UY
+confint(lm(Y ~ S + Z))
+confint(lm(scale(Y) ~ scale(S) + scale(Z)))
+2.5 % 97.5 %
+(Intercept) -0.05090044 0.05090044
+scale(S) -0.05486828 0.06645656 #<--- No Effect of Shoesize
+scale(Z) -0.63067576 -0.50935092
+```

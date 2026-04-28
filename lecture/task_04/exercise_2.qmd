@@ -1,0 +1,51 @@
+---
+title: "exercise_02"
+output: html_document
+date: "2026-04-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aufgabe 2: Pipe
+
+Strukturgleichungsmodell:
+$$
+\begin{aligned}
+X &= \epsilon X \\
+Z &= 2 \cdot X + \epsilon Z \\
+Y &= 0.5 \cdot Z + \epsilon Y
+\end{aligned}
+$$
+wobei $\epsilon_X \sim N(0, 1), \epsilon_Z \sim N(0, 1), \epsilon_Y \sim N(0, 1)$ unabhängig voneinander sind
+
+## a
+Wie groß ist der gesamte kausale Effekt von $X$ auf $Y$? Wie groß ist der direkte kausale Effekt von $X$ auf $? Entnehmen Sie dies bitte dem Diagramm bzw. dem Strukturgleichungsmodell.
+
+> Antwort: Der gesamte kausale Effekt von X auf Y beträgt 1, da X über Z auf Y wirkt.
+> $$ \text{Gesamteffekt} = \text{Effekt von X auf Z} \times \text{Effekt von Z auf Y} = 2 \times 0.5 = 1 $$
+> Der direkte kausale Effekt von X auf Y beträgt 0, da es keinen direkten Pfad von X zu Y gibt.
+
+## b: Simulation
+Simuliere `n = 1000` Datenpunkte. Führe dann einmal eine einfache Regression durch, bei der $X$ der einzige Prädiktor ist, und einmal eine multiple lineare Regression, bei der du zusätzlich für $Z$ kontrollierst. In welchem der angepassten Regressionsmodelle liegt der wahre kausale Effekt innerhalb des Konfidenzintervalls des Effekts von
+$X$?
+
+```{r}
+n <- 1000
+epsilon_X <- rnorm(n, 0, 1)
+epsilon_Z <- rnorm(n, 0, 1)
+epsilon_Y <- rnorm(n, 0, 1)
+X <- epsilon_X
+Z <- 2 * X + epsilon_Z
+Y <- 0.5 * Z + epsilon_Y
+# Einfache Regression
+model_simple <- lm(Y ~ X)
+summary(model_simple)
+# Multiple Regression
+model_multiple <- lm(Y ~ X + Z)
+summary(model_multiple)
+# Konfidenzintervall für den Effekt von X in beiden Modellen
+confint(model_simple, "X")
+confint(model_multiple, "X")
+```

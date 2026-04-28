@@ -1,0 +1,66 @@
+---
+title: "exercise_01"
+output: html_document
+date: "2026-04-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aufgabe 1: Störfaktoren (confounders)
+Betrachten wir das folgende strukturelle Kausalmodell (SCM) mit Gaußschem Rauschen:
+$$
+\begin{aligned}
+Z &= UZ \\
+X &= 0.7 \cdot Z + UX \\
+Y &= 0.42 \cdot X + 0.5 \cdot Z + UY
+\end{aligned}
+$$
+
+wobei $U_X \sim N(0, 1), U_Z \sim N(0, 1)$ und $U_Y \sim N(0, 1)$ unabhängig voneinander sind
+
+## a: Simulation
+Simulieren Sie Daten aus dem linearen SCM mit Gaußschem Rauschen. Solche Modelle werden auch als Strukturgleichungsmodelle (SEM) bezeichnet.
+
+```{r}
+N <- 1000
+UX <- rnorm(N, 0, 1)
+UZ <- rnorm(N, 0, 1)
+UY <- rnorm(N, 0, 1)
+
+Z <- UZ
+X <- 0.7 * Z + UX
+Y <- 0.42 * X + 0.5 * Z + UY
+mean(Y)
+plot(X, Y, col = ifelse(Z > 0, "red", "blue"))
+```
+
+## b: Ändern von X um eine Einheit
+Was passiert (im Durchschnitt) mit Y, wenn man X um eine Einheit verändert? Verwende dieselben exogenen Variablen,
+die du für die Simulation [a:](#a) verwendet hast.
+```{r}
+# Ändere X um eine Einheit
+X_new <- X + 1
+Y_new <- 0.42 * X_new + 0.5 * Z + UY
+mean(Y_new - Y)
+plot(X_new, Y_new, col = ifelse(Z > 0, "red", "blue"))
+```
+
+> Antwort: Die Veränderung von X um eine Einheit führt im Durchschnitt zu einer Veränderung von Y um 0.42 Einheiten, da der Koeffizient von X in der Gleichung für Y 0.42 beträgt. Das bedeutet, dass eine Erhöhung von X um 1 zu einer durchschnittlichen Erhöhung von Y um 0.42 führt, unabhängig von den Werten von Z und den Störfaktoren UY.
+
+## c: Änder von Y um eine Einheit
+Was passiert (im Durchschnitt) mit $Y$, wenn man zunächst $X$ auf 0 setzt und es dann auf 1 ändert? Verwenden Sie auch hier wieder die gleichen exogenen Variablen wie in der Simulation unter [a:](#a).
+```{r}
+# Setze X auf 0 und berechne Y
+X_zero <- 0
+Y_zero <- 0.42 * X_zero + 0.5 * Z + UY
+# Setze X auf 1 und berechne Y
+X_one <- 1
+Y_one <- 0.42 * X_one + 0.5 * Z + UY
+mean(Y_one - Y_zero)
+# Note that  this does not depend on the value of x.
+# This is a property of the linear "wonder land"
+```
+
+> Antwort: Die Veränderung von Y, wenn man X von 0 auf 1 ändert, führt im Durchschnitt zu einer Veränderung von Y um 0.42 Einheiten, da der Koeffizient von X in der Gleichung für Y 0.42 beträgt. Das bedeutet, dass eine Erhöhung von X von 0 auf 1 zu einer durchschnittlichen Erhöhung von Y um 0.42 führt, unabhängig von den Werten von Z und den Störfaktoren UY. In einem linearen Modell hängt die Veränderung von Y nur vom Koeffizienten von X ab und nicht vom aktuellen Wert von X, was eine besondere Eigenschaft linearer Modelle ist.
