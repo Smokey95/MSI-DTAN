@@ -1,0 +1,150 @@
+---
+title: "exercise_01"
+output: html_document
+date: "2026-04-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aufgabe 1: Grid Approximation of water on earth example
+Bei dieser Approximation behandeln wir den Parameter $p$ als auf einem Gitter liegend und nehmen als Näherung an, dass der Parameter nur eine diskrete Anzahl von Werten annehmen kann. 
+Wir schreiben dann vor, dass die Summe der Posterior-Verteilung über alle möglichen Werte 1 betragen muss. 
+Beachte, dass eine andere Gitterapproximation berücksichtigen könnte, dass der Parameter p stetig ist, und verlangen würde, dass sein Integral gleich eins ist.
+
+Wir nehmen an, dass der Globus $N = 9$ Mal geworfen wurde und $W = 6$ Mal auf dem Wasser gelandet ist. 
+Schreiben Sie eine Funktion, die das „unnormalisierte Posterior“ berechnet. Verwenden Sie die Gitterapproximation, um das Posterior für die Wahrscheinlichkeit p, auf dem Wasser zu landen, zu konstruieren; nehmen Sie ein Gitter mit 500 Punkten an.
+
+## a) Priorverteilung und Posteriorverteilung
+Verwende eine Priorverteilung, die der Tatsache Rechnung trägt, dass du keine Ahnung hast; alle Werte zwischen p = 0 und 1 sind gleich wahrscheinlich. 
+Stelle die Posteriorverteilung für alle Werte von p grafisch dar.
+
+```{r}
+# Grid mit 500 gleichmäßig verteilten Punkten zwischen 0 und 1
+p_grid <- seq(from = 0, to = 1, length.out = 500)
+
+# alle Punkte haben die gleiche Prior-Wahrscheinlichkeit
+prior <- rep(1, 500)
+
+# Likelihood-Funktion: Binomialverteilung
+likelihood <- dbinom(6, size = 9, prob = p_grid)
+
+# Unnormiertes Posterior: Prior * Likelihood
+unstd_posterior <- likelihood * prior
+
+# Normalisiere das Posterior, damit die Summe 1 ergibt
+posterior <- unstd_posterior / sum(unstd_posterior)
+
+# Plotten der Posterior-Verteilung
+plot(p_grid, posterior, type = "l",
+     xlab = "p (Wahrscheinlichkeit, auf Wasser zu landen)",
+     ylab = "Posterior-Wahrscheinlichkeit (Posterior-Dichte)",
+     main = "Grid Approximation der Posterior-Verteilung")
+```
+
+## b) Informativer Prior
+Verwende eine Priorverteilung, die der Tatsache Rechnung trägt, dass du mit Sicherheit weißt, dass mehr als 40 Prozent der Erde von Wasser bedeckt sind, ansonsten aber keine Ahnung hast. 
+Stelle die Posteriorverteilung für alle Werte von p grafisch dar und vergleiche sie mit a).
+
+```{r}
+# Grid mit 500 gleichmäßig verteilten Punkten wie in a)
+p_grid <- seq(from = 0, to = 1, length.out = 500)
+
+# neues Prior mit Vorwissen (alles <= 0.4 wird auf 0 gesetzt, rest bleibt gleich)
+prior_b <- ifelse(p_grid > 0.4, 1, 0)
+
+# Likelihood-Funktion bleibt gleich
+likelihood <- dbinom(6, size = 9, prob = p_grid)
+
+# Unnormiertes Posterior: Prior * Likelihood (beachte, dass Prior jetzt 0 für p <= 0.4 ist)
+unstd_posterior_b <- likelihood * prior_b
+
+# Normalisiere das Posterior, damit die Summe 1 ergibt
+posterior_b <- unstd_posterior_b / sum(unstd_posterior_b)
+```
+
+```{r}
+# Gemeinsame Y-Achse für beide Plots um unterschied besser sichtbar zu machen
+y_max <- max(posterior, posterior_b)
+
+# Plotten des neuen Posterior mit Vorwissen neben dem alten Posterior um besser vergleichen zu können
+par(mfrow = c(1, 2)) # 2 Plots nebeneinander
+
+plot(p_grid, posterior, type = "l",
+     xlab = "p (Wahrscheinlichkeit, auf Wasser zu landen)",
+     ylab = "Posterior-Wahrscheinlichkeit (Posterior-Dichte)",
+     main = "Posterior mit uninformativem Prior (a)",
+     ylim = c(0, y_max))
+
+plot(p_grid, posterior_b, type = "l",
+      xlab = "p (Wahrscheinlichkeit, auf Wasser zu landen)",
+      ylab = "Posterior-Wahrscheinlichkeit (Posterior-Dichte)",
+      main = "Posterior mit informativem Prior (b)",
+      ylim = c(0, y_max))
+
+par(mfrow = c(1, 1)) # zurück zu einem Plot
+```
+
+> Der Vergleich der beiden Posterior-Verteilungen zeigt, dass die informativere Priorverteilung in b) die Posterior-Verteilung beeinflusst. Durch das Vorwissen, dass mehr als 40 Prozent der Erde von Wasser bedeckt sind, wird die Posterior-Verteilung in b) weiter nach rechts verschoben, was höhere Werte von p wahrscheinlicher macht. Im Gegensatz dazu ist die Posterior-Verteilung in a) breiter und symmetrischer, da alle Werte von p gleich wahrscheinlich sind. Das Vorwissen in b) führt also zu einer stärkeren Konzentration der Posterior-Verteilung auf höhere Werte von p, was die Unsicherheit über die tatsächliche Wahrscheinlichkeit reduziert.
+
+## c) Stichproben aus der Posterior-Verteilung
+
+Entnehmen Sie 10 Stichproben aus der Verteilung in b), verwenden Sie die Funktion `sample`, nutzen Sie das Argument `prob` und achten Sie auf das Argument `replace`.
+
+```{r}
+samples <- sample(
+  p_grid,             # mögliche Werte von p (das Gitter)
+  size = 10,          # Anzahl der Stichproben
+  replace = TRUE,     # mit Zurücklegen (wichtig da wir aus einem diskreten Gitter ziehen)
+  prob = posterior_b   # Wahrscheinlichkeiten entsprechend der Posterior-Verteilung
+)
+```
+
+```{r}
+print(samples)
+```
+
+```{r}
+plot(1:10, samples,
+    xlab = "Stichprobenindex",
+    ylab = "Stichprobenwerte von p",
+    main = "Stichproben aus der Posterior-Verteilung (b)",
+    pch = 16,
+    ylim = c(0, 1))
+
+abline(h = 0.4, col = "red", lty = 2) # Linie bei p = 0.4 zur Verdeutlichung des informativen Priors
+```
+
+> Die 10 Stichproben aus der Posterior-Verteilung in b) zeigen, dass alle Stichprobenwerte von p über 0.4 liegen, was mit dem informativen Prior übereinstimmt, der besagt, dass mehr als 40 Prozent der Erde von Wasser bedeckt sind.
+
+## d) Schätzung der Wahrscheinlichkeit
+
+Angesichts der Daten und der Priorverteilung aus b): Wie hoch ist die Wahrscheinlichkeit, dass mehr als 80 Prozent der Erde aus Wasser bestehen? Verwende Stichproben aus der Posteriorverteilung wie in c), aber verwende mindestens 10.000 Stichproben, um den Wert zu schätzen.
+
+```{r}
+samples_large <- sample(
+  p_grid,             # mögliche Werte von p (das Gitter)
+  size = 10000,       # Anzahl der Stichproben
+  replace = TRUE,     # mit Zurücklegen (wichtig da wir aus einem diskreten Gitter ziehen)
+  prob = posterior_b   # Wahrscheinlichkeiten entsprechend der Posterior-Verteilung
+)
+```
+
+```{r}
+# Anteil der Strichproben mit p > 0.8 berechnen
+prob_above <- mean(samples_large > 0.8) # mean() gibt den Anteil der TRUE-Werte des Vektors, was der Wahrscheinlichkeit entspricht
+print(prob_above)
+```
+
+> Die geschätzte Wahrscheinlichkeit, dass mehr als 80 Prozent der Erde aus Wasser bestehen, beträgt ca. 0.127 oder 12.7%. Das bedeutet, dass basierend auf den Daten und der informativen Priorverteilung aus b) etwa 12.7% der Stichproben aus der Posterior-Verteilung Werte von p über 0.8 aufweisen. Dies zeigt, dass es eine gewisse Wahrscheinlichkeit gibt, dass mehr als 80 Prozent der Erde aus Wasser bestehen, aber es ist nicht sehr wahrscheinlich im Vergleich zu anderen möglichen Werten von p.
+
+```{r}
+hist(samples_large,
+     breaks = 50,
+     xlab = "p", main = "Stichproben aus Posterior b)",
+     col = "lightblue", border = "white", xlim = c(0, 1))
+abline(v = 0.8, col = "red", lty = 2, lwd = 2)
+```
+
+> Das Histogramm der Stichproben aus der Posterior-Verteilung in b) zeigt, dass die meisten Stichprobenwerte von p zwischen 0.4 und 0.8 liegen, was mit dem informativen Prior übereinstimmt. Es gibt jedoch auch einige Stichprobenwerte über 0.8, was die geschätzte Wahrscheinlichkeit von etwa 12.7% erklärt, dass mehr als 80 Prozent der Erde aus Wasser bestehen könnten. Die rote Linie bei p = 0.8 verdeutlicht die Grenze, über der wir die Wahrscheinlichkeit von 0.127 berechnet haben.
