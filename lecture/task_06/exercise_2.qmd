@@ -1,0 +1,167 @@
+---
+title: "exercise_02"
+output: html_document
+date: "2026-04-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aufgabe 2: MCMC-Simulation mit Stan
+Dies ähnelt der Gitterapproximation aus der ersten Aufgabe, nur dass wir die Stichproben nun mit Stan durchführen; ansonsten ist die Situation dieselbe.
+Wir nehmen an, dass der Globus $N = 9$ Mal geworfen wurde und $W = 6$ Mal auf dem Wasser gelandet ist.
+
+## Arbeiten mit `cmdstanr`
+Im ersten Schritt soll das Arbeiten mit 'cmdstanr' nachvollzogen werden, um die Posterior-Verteilung für die Wahrscheinlichkeit $p$ zu schätzen, auf Wasser zu landen.
+
+## Schritt 1: Pakete laden
+Im ersten Schritt wird das notwendige Paket geladen.
+```{r}
+#| message: false
+library(cmdstanr)
+```
+
+### Schritt 2: Stan-Modell definieren
+Stan-Modelle werden in einer speziellen Syntax definiert. Hier definieren wir ein einfaches Modell, das die Binomialverteilung für die Likelihood und eine uniforme Priorverteilung für den Parameter p verwendet.
+
+```{r}
+stan_code <- "
+data {                   // Daten die in das Modell eingegeben werden
+  int<lower=0> N;        // Anzahl der Würfe
+  int<lower=0> W;        // Anzahl der Wasserwürfe
+}
+parameters {             // Parameter, die das Modell schätzen soll
+  real<lower=0, upper=1> p; // Wahrscheinlichkeit, auf Wasser zu landen (gesuchte Parameter)
+}
+model {                  // Modelldefinition
+  p ~ beta(1, 1); // uniformativer Prior (entspricht Aufgabe 1a)
+  W ~ binomial(N, p); // Likelihood
+}
+"
+stan_file <- write_stan_file(stan_code)
+```
+
+### Schritt 3: Daten übergeben und Stan ausführen
+Nun übergeben wir die Daten an das Modell und führen die MCMC-Simulation durch, um die Posterior-Verteilung für den Parameter $p$ zu erhalten.
+
+```{r}
+#| warning: false
+model <- cmdstan_model(stan_file)
+
+fit <- model$sample(
+  data = list(N = 9, W = 6),
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  seed = 42
+)
+```
+
+### Schritt 4: Ergebnisse analysieren
+
+```{r}
+fit$summary()          # Zusammenfassung
+fit$draws("p")         # Rohe Stichproben
+
+# Für Plots — Stichproben extrahieren
+samples_stan <- fit$draws("p", format = "df")$p
+hist(samples_stan, breaks = 50, main = "Posterior via Stan", xlab = "p", xlim = c(0, 1))
+```
+
+## a) Informierter Prior in Stan (p > 0.4)
+Verwende eine Priorverteilung, die der Tatsache Rechnung trägt, dass du mit Sicherheit weißt, dass mehr als 40 Prozent der Erde von Wasser bedeckt sind, ansonsten aber keine Ahnung hast. Stelle die Posteriorverteilung für alle Werte von $p$ grafisch dar.
+
+Der Unterschied zum einführenden Teil ist ausschließlich das Stan-Modell, konkret die Parameter-Grenzen und den Prior.
+
+```{r}
+stan_code_a <- "
+data {                   // Daten die in das Modell eingegeben werden
+  int<lower=0> N;        // Anzahl der Würfe
+  int<lower=0> W;        // Anzahl der Wasserwürfe
+}
+parameters {             // Parameter, die das Modell schätzen soll
+  real<lower=0.4, upper=1> p; // p kann nur Werte zwischen 0.4 und 1 annehmen (informierter Prior)
+}
+model {                  // Modelldefinition
+  // kein expliziter Prior nötig — die Grenzen erzwingen einen
+  // uniformen Prior auf [0.4, 1]
+  W ~ binomial(N, p);
+}
+"
+stan_file_a <- write_stan_file(stan_code_a)
+```
+
+> Stan interpretiert `<lower=0.4, upper=1>` automatisch als uniformen Prior auf diesem Intervall, Werte ≤ 0.4 sind schlicht nicht möglich.
+
+### Modell kompilieren und ausführen
+
+```{r}
+#| warning: false
+model_a <- cmdstan_model(stan_file_a, quiet = TRUE)
+
+fit_a <- model_a$sample(
+  data = list(N = 9, W = 6),
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  seed = 42,
+  refresh = 0
+)
+```
+
+### Ergebnisse analysieren
+
+```{r}
+samples_a <- fit_a$draws("p", format = "df")$p
+
+# Gemeinsame Y-Achse für fairen Vergleich
+y_max <- max(
+  density(samples_stan)$y,
+  density(samples_a)$y
+)
+
+par(mfrow = c(1, 2))
+
+plot(density(samples_stan),
+     main = "Uninformativer Prior (Beta(1,1))",
+     xlab = "p", xlim = c(0, 1), ylim = c(0, y_max))
+
+plot(density(samples_a),
+     main = "Informativer Prior (p > 0.4)",
+     xlab = "p", xlim = c(0, 1), ylim = c(0, y_max))
+
+par(mfrow = c(1, 1))
+```
+
+> In diesem Vergleich wird `density` verwendet, um eine glatte Kurve der Posterior-Verteilung zu erhalten, was den Unterschied zwischen den beiden Priors besser sichtbar macht.
+
+## b) Vergleich der Posterior-Verteilungen
+
+Wie hoch ist die Wahrscheinlichkeit, dass die Erde zu mehr als 80 Prozent aus Wasser besteht? Schätze dies erneut anhand der Stichproben. Verwende dabei Stichproben aus der Posterior-Verteilung wie in Aufgabe 1, Teil c).
+
+### Schritt 1: Anteil der Stichproben mit p > 0.8
+Im ersten Schritt berechnen wir den Anteil der Stichproben aus der Posterior-Verteilung, die Werte von p größer als 0.8 haben.
+
+```{r}
+prob_above_08 <- mean(samples_a > 0.8)
+cat("P(p > 0.8 | Daten):", round(prob_above_08, 4), "\n")
+```
+
+### Schritt 2: Visualisierung
+```{r}
+hist(samples_a,
+     breaks = 50,
+     main = "Posterior (informativer Prior) mit P(p > 0.8)",
+     xlab = "p",
+     xlim = c(0, 1),
+     col = "lightblue",
+     border = "white")
+
+abline(v = 0.8, col = "red", lty = 2, lwd = 2)
+
+# Geschätzte Wahrscheinlichkeit im Plot anzeigen
+legend("topleft",
+       legend = paste("P(p > 0.8) =", round(prob_above_08, 4)),
+       bty = "n")
+```
