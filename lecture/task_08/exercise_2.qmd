@@ -1,0 +1,107 @@
+---
+title: "exercise_02"
+output: html_document
+date: "2026-04-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Working with posterior samples
+
+Angenommen, Sie leiten ein Unternehmen, das für die Produktion einen hohen Stromverbrauch hat. 
+Sie verfügen zudem über eigene interne Energiequellen (z. B. Solarstrom). 
+Solche Energiequellen weisen in der Regel starke Schwankungen in der Energieerzeugung auf. 
+Sie können Energie auch einen Tag im Voraus auf dem Markt kaufen (zu 300 Euro pro Megawattstunde).
+Wenn Sie mehr Strom verbrauchen als bestellt, müssen Sie insgesamt 1000 Euro/MWh als Strafgebühr zahlen. 
+Wenn Sie weniger verbrauchen, müssen Sie den bestellten Betrag bezahlen, es fallen jedoch keine zusätzlichen Kosten an.
+Morgen um 13:00 Uhr haben Sie einen Auftrag geplant, der 2 MWh benötigt. 
+Sie konsultieren Ihr bayessches Vorhersagemodell. 
+Beispiele aus der Posteriorverteilung für diese eigenen Energieressourcen sind in der Datei power_post in Einheiten von MWh angegeben. 
+Sie können diese Datei über das folgende Beispiel laden:
+
+```
+samples = read.table('https://raw.githubusercontent.com/oduerr/da/master/lab/posterior_samples/power_post.csv')
+samples = samples$samples`
+```
+
+## Situation:
+Die beschriebene Situation lässt sich wie folgt zusammenfassen:
+
+- Produktionsbedarf: 2 MWh
+- Eigene Erzeugung: $X$ MWh (unsicher, aus der Posteriorverteilung)
+- Vorbestellpreis: 300 EUR/MWh
+- Strafgebühr bei Unterdeckung: 1000 EUR/MWh (für die fehlende Menge)
+- Überbestellung: man zahlt trotzdem den bestellen Betrag
+
+Daraus ergibt sich die Kostenfunktion:
+
+$$
+\text{Kosten}(q, X) = 300 \cdot q + 1000 \cdot \max(0, 2 - X - q)
+$$
+
+mit $q$ als Bestellmenge und $X$ als eigener Erzeugung.
+
+## a) 
+Stellen Sie die Verteilungsdichte oder das Histogramm der posterioren Stichproben grafisch dar und schätzen Sie den Erwartungswert für Ihre eigene Stromerzeugung.
+
+```{r}
+
+# Daten laden (Daten von der Posteriorverteilung)
+samples = read.table('https://raw.githubusercontent.com/oduerr/da/master/lab/posterior_samples/power_post.csv')
+samples = samples$samples
+
+# Erwartungswert schätzen
+cat("E[eigene Stromerzeugung] =", round(mean(samples), 4), "MWh (Erwartungswert)\n")
+
+# Histogramm mit Dichtekurve
+hist(samples, probability = TRUE,
+     main = "Posteriorverteilung der eigenen Stromerzeugung",
+     xlab = "Energie (MWh)", col = "steelblue", border = "white", breaks = 40)
+lines(density(samples), col = "red", lwd = 2)
+abline(v = mean(samples), col = "darkred", lty = 2, lwd = 2)
+```
+
+## b) 
+Was sind die erwarteten Kosten, wenn Sie 1 MWh bestellen?
+
+```{r}
+bedarf <- 2  # MWh Produktionsbedarf
+
+# Kostenfunktion
+kosten <- function(q, x) {
+  300 * q + 1000 * pmax(0, bedarf - x - q)
+}
+
+# Erwartete Kosten für q = 1 MWh
+q1_kosten <- kosten(1, samples)
+cat("Erwartete Kosten bei 1 MWh Bestellung:",
+    round(mean(q1_kosten), 2), "EUR\n")
+```
+
+## c) 
+[optional] Wäre es günstiger, einfach weniger oder mehr zu bestellen? Finden Sie die minimalen erwarteten Kosten. Beachten Sie, dass diese Analyse wahrscheinlich im deutschen Energiemarkt nicht erlaubt ist.
+
+```{r}
+# Numerische Suche über ein Gitter
+q_werte <- seq(0, 2, by = 0.001)
+erw_kosten <- sapply(q_werte, function(q) mean(kosten(q, samples)))
+
+optimal_q <- q_werte[which.min(erw_kosten)]
+cat("Optimale Bestellmenge:", round(optimal_q, 3), "MWh\n")
+cat("Minimale erwartete Kosten:", round(min(erw_kosten), 2), "EUR\n")
+
+# Analytische Lösung als Vergleich
+D <- pmax(0, bedarf - samples)
+cat("Analytisch (70%-Quantil von D):", round(quantile(D, 0.7), 3), "MWh\n")
+
+# Plot: Kosten als Funktion der Bestellmenge
+plot(q_werte, erw_kosten, type = "l", col = "steelblue", lwd = 2,
+     main = "Erwartete Kosten vs. Bestellmenge",
+     xlab = "Bestellmenge q (MWh)", ylab = "Erwartete Kosten (EUR)")
+abline(v = optimal_q, col = "red", lty = 2, lwd = 2)
+abline(v = 1, col = "orange", lty = 3, lwd = 2)
+legend("topright", legend = c("Optimum", "q = 1 MWh"),
+       col = c("red", "orange"), lty = c(2, 3), lwd = 2)
+```
