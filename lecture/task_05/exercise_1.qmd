@@ -1,0 +1,11 @@
+---
+title: "exercise_01"
+output: html_document
+date: "2026-05-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aufgabe 1: DAG und kausaler Effekt (Aus: „Statistical Rethinking“)
