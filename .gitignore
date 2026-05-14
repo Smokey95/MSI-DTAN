@@ -16,3 +16,6 @@
 
 # Ignore that private stuff
 *.private.yml
+
+# Ignore renderd html files
+*.html
