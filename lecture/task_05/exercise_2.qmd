@@ -9,3 +9,33 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Aufgabe 2: D-Trennung / Korrektur-Einstellsatz (Simulationsstudie)
+Wir leben im Wunderland der linearen Modelle. 
+Du möchtest den Regressionskoeffizienten zwischen X und Y schätzen.
+Welche Variable musst du einbeziehen (d. h. in das lineare Modell aufnehmen)?
+Du hast das folgende SCM (du kannst den Code von https://github.com/oduerr/da/blob/master/causality/small_simulation.R kopieren und einfügen)
+
+```{r}
+N = 10000
+#The Exogenous variables
+UZ = rnorm(N)
+UX = rnorm(N)
+UY = rnorm(N)
+UW = rnorm(N)
+UW2 = rnorm(N)
+Z = UZ
+X = 0.1*Z + UX
+Y = 0.42*X + 0.8* Z + UY
+
+W = 1.1 * X - 0.6*Y + UW
+W2 = 0.2*W + UW2
+```
+
+## a)
+Zeichne den Graphen
+
+## b)
+Schätzen Sie den Regressionskoeffizienten von X auf Y, indem Sie die richtigen Variablen einbeziehen.
+
+## c)
+Definieren Sie den Graphen im Paket `dagitty`, zeichnen Sie den Graphen und überprüfen Sie, ob der Anpassungssatz korrekt ist. 
+Um den Anpassungssatz zu überprüfen, verwenden Sie die Funktion `adjustmentSets` aus dem Paket `dagitty`.
