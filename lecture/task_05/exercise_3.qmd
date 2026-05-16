@@ -1,0 +1,32 @@
+---
+title: "exercise_03"
+output: html_document
+date: "2026-05-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aufgabe 3: Milk and Brain (Applied)
+
+Dieser Datensatz („milk.csv“) schätzt den Einfluss des Anteils des Neokortex auf die Nährstoffvielfalt der Muttermilch. 
+Die Originalstudie finden Sie unter https://onlinelibrary.wiley.com/doi/full/10.1002/evan.20289. 
+Dieses Beispiel ist von Stat. Rethinking inspiriert. Sie können die Daten mit dem folgenden Code herunterladen:
+
+```{r}
+#library(rethinking)
+#data(milk)
+#write.csv2(milk, file='~/Downloads/milk.csv', row.names = FALSE)
+milk = read.csv2('http://www-home.htwg-konstanz.de/~oduerr/data/milk.csv')
+```
+
+## a)
+Wie lässt sich der Einfluss des Anteils des Neokortex (N) auf die Kilokalorien pro Gramm Muttermilch (K) abschätzen? 
+Angenommen, der kausale Zusammenhang zwischen den drei Variablen (M, N, K) stellt sich wie folgt dar:
+U ist ein nicht gemessener Störfaktor und M die (Masse): Körpergewicht der Mutter in Kilogramm
+
+![](lecture5_task3.drawio.png)
+
+## b)
+Verwende `daggity`, um deine Antwort zu überprüfen
