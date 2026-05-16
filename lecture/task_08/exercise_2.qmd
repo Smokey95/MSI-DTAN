@@ -1,7 +1,14 @@
 ---
 title: "exercise_02"
 output: html_document
-date: "2026-04-29"
+date: "2026-05-16"
+format:
+  html:
+    author: ""
+  pdf: default
+
+metadata-files:
+  - ../../.private.yml
 ---
 
 ```{r setup, include=FALSE}
@@ -43,7 +50,7 @@ $$
 
 mit $q$ als Bestellmenge und $X$ als eigener Erzeugung.
 
-## a) 
+## a) Historgramm und Erwartungswert
 Stellen Sie die Verteilungsdichte oder das Histogramm der posterioren Stichproben grafisch dar und schätzen Sie den Erwartungswert für Ihre eigene Stromerzeugung.
 
 ```{r}
@@ -63,7 +70,7 @@ lines(density(samples), col = "red", lwd = 2)
 abline(v = mean(samples), col = "darkred", lty = 2, lwd = 2)
 ```
 
-## b) 
+## b) Erwartete Kosten
 Was sind die erwarteten Kosten, wenn Sie 1 MWh bestellen?
 
 ```{r}
@@ -80,7 +87,7 @@ cat("Erwartete Kosten bei 1 MWh Bestellung:",
     round(mean(q1_kosten), 2), "EUR\n")
 ```
 
-## c) 
+## c) Optimale Bestellmenge
 [optional] Wäre es günstiger, einfach weniger oder mehr zu bestellen? Finden Sie die minimalen erwarteten Kosten. Beachten Sie, dass diese Analyse wahrscheinlich im deutschen Energiemarkt nicht erlaubt ist.
 
 ```{r}
