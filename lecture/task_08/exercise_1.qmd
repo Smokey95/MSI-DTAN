@@ -1,0 +1,416 @@
+---
+title: "exercise_01"
+output: html_document
+date: "2026-05-16"
+format:
+  html:
+    author: ""
+  pdf: default
+
+metadata-files:
+  - ../../.private.yml
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Lineare Regression
+In dieser Übung werden wir die Maximum-Likelihood-Lösung (ML) mit einer bayesschen Lösung für die lineare Regression vergleichen.
+Wir werden synthetische Daten generieren, Modelle mit beiden Methoden anpassen
+und die Ergebnisse analysieren, um die Unterschiede in ihren Ansätzen und Ergebnissen zu verstehen.
+
+## a) Daten generieren
+Verwenden Sie denselben Verfahren zur Datengenerierung wie beim Prinzip der maximalen Wahrscheinlichkeit (lineare Regression), 
+jedoch mit nur 5 Datenpunkten bei $𝑥 = −2, −1, 0, 1, 2$. 
+
+Simuliere 5 Datenpunkte $(𝑥, 𝑦)$ unter den Annahmen der linearen Regression:
+$$𝑦 ∼ 𝑁 𝑜𝑟𝑚(𝜇 = 2,0 ⋅ 𝑥 + 1,0, 𝜎 = 1)$$. 
+$𝑥$ soll im Bereich von $-2$ bis $2$ liegen.
+
+> Hinweis: Verwende die Funktion `𝑟𝑛𝑜𝑟𝑚`.
+
+```{r}
+# Aufgabe a) Datengenerierung
+set.seed(42)  # Für Reproduzierbarkeit
+
+x <- c(-2, -1, 0, 1, 2)   # 5 feste x-Werte
+N <- length(x)
+
+# y ~ Norm(mu = 2.0 * x + 1.0, sigma = 1)
+y <- rnorm(N, mean = 2.0 * x + 1.0, sd = 1)
+
+# Ausgabe zur Kontrolle
+data.frame(x = x, y = y)
+```
+
+> - `x` sind die vorgegebenen Punkte $-2, -1, 0, 1, 2$.
+> - Der wahre Datengenerierungsprozess ist $𝑦 ∼ 𝑁 𝑜𝑟𝑚(𝜇 = 2,0 ⋅ 𝑥 + 1,0, 𝜎 = 1)$, d.h. die wahren Parameter sind $a = 1.0$ (Achsenabschnitt) und $b = 2.0$ (Steigung).
+> - `rnorm` wird verwendet, um die $y$-Werte entsprechend der Normalverteilung zu generieren.
+> - `y` enthält die generierten Zielwerte, die wir für die lineare Regression verwenden werden.
+
+## b) Maximum-Likelihood-Lösung
+Schätze die Maximum-Likelihood-Lösung mit dem R-Befehl `lm`. 
+Stelle die Daten und $\mu_{ML} = \mathbb{E}(y|x)$ grafisch dar.
+
+```{r}
+# Modell fitten
+fit_ml <- lm(y ~ x)
+#summary(fit_ml)
+
+# Geschätzte Koeffizienten
+a_ml <- coef(fit_ml)[1]  # Intercept
+b_ml <- coef(fit_ml)[2]  # Steigung
+cat("ML Intercept (a):", a_ml, "\n",
+    "ML Steigung  (b):", b_ml, "\n")
+
+# Plot der Daten + mu_ML
+x_seq <- seq(-3, 3, length.out = 100)
+mu_ml <- a_ml + b_ml * x_seq
+
+plot(x, y,
+     pch = 19, col = "steelblue",
+     xlab = "x", ylab = "y",
+     main = "Daten + ML-Lösung",
+     xlim = c(-3, 3))
+
+lines(x_seq, mu_ml, col = "red", lwd = 2)
+legend("topleft", legend = c("Daten", expression(mu[ML])),
+       col = c("steelblue", "red"), pch = c(19, NA), lty = c(NA, 1), lwd = 2)
+
+## Plot der wahren Linie mit Parametern aus a)
+abline(a = 1.0, b = 2.0, col = "green", lwd = 2, lty = 2)
+legend("topleft", legend = c("Daten", expression(mu[ML]), "Wahre Linie"),
+       col = c("steelblue", "red", "green"), pch = c(19, NA, NA), lty = c(NA, 1, 2), lwd = c(NA, 2, 2))
+```
+
+> - `lm(y ~ x)` führt die ML-Schätzung durch (bei linearer Regression äquivalent zu Least Squares)
+> - `coef(fit_ml)` extrahiert die geschätzten Koeffizienten (Intercept `a` und Steigung `b`).
+> - Die wahren Werte waren sind $a = 1.0$ und $b = 2.0$ (siehe Aufgabe a)). Mit nur 5 Datenpunkten wird `lm` leicht abweichen (siehe Ausgabe).
+
+## c) Bayesianische Analyse mit `cmdstanr`
+Führen Sie eine Bayes'sche Analyse mit einer extrem flachen Priorverteilung durch, z. B. $𝑎, 𝑏 ∼ 𝑢𝑛𝑖𝑓(−100, 100)$ und $\sigma \sim \text{uniform}(0, 100)$. 
+Entnehmen Sie Stichproben von $𝑎, 𝑏$ aus der Posteriorverteilung und stellen Sie diese grafisch dar. 
+Vergleichen Sie den Mittelwert der Bayes'schen Analyse für $𝑎$ und $𝑏$ mit der Maximum-Likelihood-Lösung.
+
+### Erstellen von Stichproben aus der Verteilung:
+```r
+library(cmdstanr)
+m_rcmdstan <- cmdstan_model('Link_to_stan_file.stan')
+post = m_rcmdstan$sample(data=list(N=N,x=x, y=y)) #Sampling from the posterior
+samples = post$draws(format = "df") #Extracting the samples in standard data.frame format
+```
+
+### Schritt 1: Stan-Modell erstellen
+Im ersten Schritt wird eine Stan Datei `linreg.stan` erstellt, die das lineare Regressionsmodell mit den angegebenen Priorverteilungen definiert.
+```stan
+data {
+  int<lower=0> N;   // Anzahl Datenpunkte
+  vector[N] x;      // Prädiktoren
+  vector[N] y;      // Zielvariable
+}
+
+parameters {
+  real a;           // Intercept
+  real b;           // Steigung
+  real<lower=0> sigma;  // Standardabweichung
+}
+
+model {
+  // Sehr flache Priors
+  a ~ uniform(-100, 100);
+  b ~ uniform(-100, 100);
+  sigma ~ uniform(0, 100);
+
+  // Likelihood
+  y ~ normal(a + b * x, sigma);
+}
+```
+
+> Das Stan-Modell definiert Prior, Likelihood und Parameter
+
+### Schritt 2: Posterior-Samples extrahieren und analysieren
+Nach dem Sampling werden die Posterior-Samples von `a` und `b` extrahiert und deren Mittelwerte mit den ML-Schätzungen verglichen.
+
+#### `cmdstanr` lib laden
+```{r}
+suppressMessages(suppressWarnings(library(cmdstanr))) # Meldungen der Lib. unterdrücken
+library(cmdstanr)
+```
+
+#### Stand-Model aus File laden
+```{r}
+# Stan-Modell laden
+m <- cmdstan_model('linreg.stan')
+```
+
+#### Sampling aus dem Posterior
+Der folgende Code startet mit `m$sample()` den MCMC-Algorithmus.
+Er "wandert" also durch den Parameterraum und sammelt Samples aus dem Posterior für `a`, `b` und `sigma`.
+
+```{r}
+# Sampling aus dem Posterior
+# | warning: false
+post <- m$sample(
+  data = list(N = N, x = x, y = y),
+  seed = 42,
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  refresh = 500
+)
+```
+
+> **Erklärung der Parameter**:
+>
+> - `data = list(N=N, x=x, y=y)` → Übergibt die Daten ans Stan-Modell. Das sind die Werte, die im `data {}`-Block des Stan-Files stehen.
+>
+> - `chains = 4` → Startet 4 unabhängige "Wanderungen" durch den Parameterraum. Wenn alle 4 zum gleichen Ergebnis kommen → gutes Zeichen, das Sampling hat funktioniert.
+> - `iter_warmup = 1000` → Die ersten 1000 Schritte pro Chain werden weggeworfen — der Algorithmus "findet" erstmal die richtige Gegend im Parameterraum (wie Aufwärmen vor dem Sport :D).
+> - `iter_sampling = 1000` → Diese 1000 Schritte pro Chain werden behalten und sind deine eigentlichen Posterior-Samples. Wir haben am Ende also 4 × 1000 = 4000 Samples.
+> `refresh = 500` → Gibt alle 500 Schritte einen Fortschritts-Update in der Konsole aus.
+
+#### Samples extrahieren und darstellen
+```{r}
+# Samples extrahieren
+samples <- post$draws(format = "df")
+plot(hist(samples$a), main = "Histogram der Samples")
+```
+
+#### Plotten
+```{r}
+# Plot der Posterior-Samples für a und b
+par(mfrow = c(1, 2))
+
+plot(density(samples$a), main = "Posterior von a (Intercept)",
+     xlab = "a", col = "steelblue", lwd = 2, xlim=c(-5,5))
+abline(v = mean(samples$a), col = "red", lty = 2)
+
+plot(density(samples$b), main = "Posterior von b (Steigung)",
+     xlab = "b", col = "darkgreen", lwd = 2, xlim=c(-5,5))
+abline(v = mean(samples$b), col = "red", lty = 2)
+
+par(mfrow = c(1, 1))
+```
+> Der Plot zeigt dir die Posterior-Verteilung von `a` und `b`. Einfach gesagt also: "Welche Werte für Intercept und Steigung sind nach dem Sehen der Daten plausibel?"
+>
+> Die rot gestrichelte Linie gibt dabei den Mittelwert des Posteriors an (das wäre der "beste Schätzwert").
+
+#### Vergleich Bayes vs. ML
+```{r}
+cat(
+  "=== Vergleich Bayes vs. ML ===\n",
+  "Intercept a:  Bayes =", round(mean(samples$a), 3),
+  " | ML =", round(a_ml, 3), "\n",
+  "Steigung  b:  Bayes =", round(mean(samples$b), 3),
+  " | ML =", round(b_ml, 3), "\n"
+)
+```
+
+## d) $x$-Abhängigkeit von $\mu$
+Berechne bei $x = 1$ den Wert von $\mu|x = a + bx$ anhand der posterioren Stichproben und stelle ihn grafisch dar. 
+Ermittle den Mittelwert sowie das 0,05- und das 0,95-Quantil.
+
+### Samples ziehen
+Im ersten Schritt nutzen wir alle 4000 Posterior-Samples für `a` und `b` und berechnen mit der oben gezeigten Formel die Verteilung von $\mu$ bei $x = 1$. Also:
+```
+Sample 1:  mu_1 = a_1 + b_1 * 1
+Sample 2:  mu_2 = a_2 + b_2 * 1
+...
+Sample 4000: mu_4000 = a_4000 + b_4000 * 1
+```
+
+```{r}
+# Für jeden Posterior-Sample: mu_i = a_i + b_i * 1
+mu_at_x1 <- samples$a + samples$b * 1
+cat("mu bei x=1:\n", head(mu_at_x1))
+```
+
+> Die Ausgabe oben zeigt die ersten 5 Werte des Vektors, also die berechneten $\mu$ Werte für die jeweiligen `a` und `b` Werte an $x=1$
+
+```{r}
+# Mittelwert und Quantile
+mean_mu  <- mean(mu_at_x1)
+q05_mu   <- quantile(mu_at_x1, 0.05)
+q95_mu   <- quantile(mu_at_x1, 0.95)
+
+cat("mu bei x=1:\n",
+    "  Mittelwert:", round(mean_mu, 3), "\n",
+    "  5%-Quantil:", round(q05_mu, 3), "\n",
+    "  95%-Quantil:", round(q95_mu, 3), "\n")
+```
+
+> Der wahre Wert wäre $\mu = 2 \cdot 1 + 1 = 3.0$. Die Ausgabe zeigt also wie weit der Mittelwert abweicht.
+
+### Plot der Posterior-Verteilung von mu|x=1
+```{r}
+plot(density(mu_at_x1),
+     main = expression(paste("Posterior von ", mu, " | x=1")),
+     xlab = expression(mu),
+     col = "steelblue", lwd = 2)
+
+abline(v = mean_mu, col = "red",    lty = 2, lwd = 2)  # Mittelwert
+abline(v = q05_mu,  col = "orange", lty = 3, lwd = 2)  # 5%-Quantil
+abline(v = q95_mu,  col = "orange", lty = 3, lwd = 2)  # 95%-Quantil
+
+legend("topright",
+       legend = c("Mittelwert", "5%/95%-Quantil"),
+       col = c("red", "orange"), lty = c(2, 3), lwd = 2)
+```
+
+## e)
+Berechne wie in d) $𝜇|𝑥 = 𝑎 + 𝑏𝑥$ an $40$ Stellen im Bereich von $𝑥 = −10$ bis $𝑥 = 10$.
+Bestimme den Mittelwert sowie das 0,05- und das 0,95-Quantil. 
+Stelle den Mittelwert und die Quantile als Funktion von $𝑥$ grafisch dar.
+Füge dem Diagramm außerdem die Daten zusammen mit der Maximum-Likelihood-Lösung hinzu.
+
+### 40 x-Werte von -10 bis 10
+```{r}
+x_seq <- seq(-10, 10, length.out = 40)
+```
+
+### Berechnung der Posterior-Samples
+Für jeden x-Wert muss $\mu$ aus allen Posterior-Samples berechnet werden.
+Das Ergebnis ist also kein Vektor mehr sondern eine Matrix mit 4000 Zeilen (Samples) x 40 Spalten (x-Werte)
+
+```{r}
+mu_matrix <- outer(samples$a, rep(1, 40)) + outer(samples$b, x_seq)
+```
+
+### Mittelwert und Quantile berechnen
+```{r}
+mu_mean <- apply(mu_matrix, 2, mean)
+mu_q05  <- apply(mu_matrix, 2, quantile, 0.05)
+mu_q95  <- apply(mu_matrix, 2, quantile, 0.95)
+
+cat("mu bei 40 x Werten:\n",
+    "  Mittelwert:", round(mu_mean, 3), "\n",
+    "  5%-Quantil:", round(mu_q05, 3), "\n",
+    "  95%-Quantil:", round(mu_q95, 3), "\n")
+```
+
+### Plot
+```{r}
+# Plot
+plot(x_seq, mu_mean,
+     type = "l", col = "steelblue", lwd = 2,
+     ylim = range(c(mu_q05, mu_q95)),
+     xlab = "x", ylab = expression(mu),
+     main = "Bayesianische Posterior-Mittelwerte und Quantile")
+
+# 90%-Kredibilitätsband
+polygon(c(x_seq, rev(x_seq)),
+        c(mu_q05, rev(mu_q95)),
+        col = rgb(0.5, 0.7, 1, 0.3), border = NA)
+
+lines(x_seq, mu_q05, col = "steelblue", lty = 2, lwd = 1.5)
+lines(x_seq, mu_q95, col = "steelblue", lty = 2, lwd = 1.5)
+
+# ML-Lösung hinzufügen
+lines(x_seq, a_ml + b_ml * x_seq, col = "red", lwd = 2, lty = 1)
+
+# Datenpunkte hinzufügen
+points(x, y, pch = 19, col = "black", cex = 1.2)
+
+legend("topleft",
+       legend = c("Bayes Mittelwert", "5%/95%-Quantil", "ML-Lösung", "Daten"),
+       col = c("steelblue", "steelblue", "red", "black"),
+       lty = c(1, 2, 1, NA), pch = c(NA, NA, NA, 19), lwd = 2)
+```
+
+> Der Plot zeigt, dass das Kredibilitätsband breiter wird je weiter x vom Datenbreich (−2 bis 2) entfernt ist — bei x=±10 ist die Unsicherheit viel größer als bei x=0.
+
+## f) Posterior Predictive Distribution
+Die Lösungen in d)–e) beschreiben lediglich, wie sich die Verteilung des Mittelwerts $𝜇|𝑥$ ändert, wenn man $𝑥$ verändert; sie beschreiben nicht, wie die
+posteriorische Vorhersageverteilung $𝑝(𝑦|𝐷)$ aussieht.
+
+Um aus dieser Verteilung zu simulieren, werden $𝑦_𝑖$ aus vielen posterioren Stichproben von $𝑎_𝑖$, $𝑏_𝑖$ entnommen, die $𝜇_𝑖|𝑥$ ergeben (wie oben), und dann wird aus $𝑦 \text {𝑁𝑜𝑟𝑚𝑎𝑙}(\mu_𝑖, \sigma_𝑖)$.
+
+Wir beschränken uns auf den Punkt $𝑥 = 1$. Wie in Abbildung d) die Dichte von $\mu$ und $𝑦$ bei $𝑥 = 1$.
+
+```{r}
+# Schritt 1: mu_i aus Posterior-Samples (wie in d)
+mu_at_x1 <- samples$a + samples$b * 1
+
+# Schritt 2: Für jeden Sample ein y ziehen aus Normal(mu_i, sigma_i)
+y_pred <- rnorm(nrow(samples), mean = mu_at_x1, sd = samples$sigma)
+
+# Plot: beide Verteilungen übereinander
+plot(density(y_pred),
+     col = "red", lwd = 2,
+     main = "Posterior Predictive vs. Posterior von mu bei x=1",
+     xlab = "Wert bei x=1",
+     xlim=c(-10,20),
+     ylim=c(0,1))
+
+lines(density(mu_at_x1),
+      col = "blue", lwd = 2)
+
+legend("topright",
+       legend = c("y (Posterior Predictive p(y|D))",
+                  expression(paste(mu, " (Posterior von ", mu, "|x=1)"))),
+       col = c("red", "steelblue"), lwd = 2)
+```
+
+## g)
+Posterior-Vorhersage für alle x.
+
+```{r}
+# Aufgabe g) [Optional] Posterior Predictive für alle x
+
+# 40 x-Werte von -10 bis 10 (wie in e)
+x_seq <- seq(-10, 10, length.out = 40)
+
+# Schritt 1: mu-Matrix berechnen (wie in e)
+mu_matrix <- sapply(x_seq, function(x_i) samples$a + samples$b * x_i)
+
+# Schritt 2: y samplen aus Normal(mu_i, sigma_i) — neu gegenüber e)
+y_pred_matrix <- matrix(
+  rnorm(nrow(samples) * length(x_seq),
+        mean = mu_matrix,
+        sd   = samples$sigma),  # sigma wird automatisch recycled
+  nrow = nrow(samples)
+)
+
+# Quantile für mu (wie in e)
+mu_mean <- apply(mu_matrix,     2, mean)
+mu_q05  <- apply(mu_matrix,     2, quantile, 0.05)
+mu_q95  <- apply(mu_matrix,     2, quantile, 0.95)
+
+# Quantile für y (Posterior Predictive) — neu
+y_mean  <- apply(y_pred_matrix, 2, mean)
+y_q05   <- apply(y_pred_matrix, 2, quantile, 0.05)
+y_q95   <- apply(y_pred_matrix, 2, quantile, 0.95)
+
+# Plot
+plot(x_seq, mu_mean,
+     type = "l", col = "steelblue", lwd = 2,
+     ylim = range(c(y_q05, y_q95)),
+     xlab = "x", ylab = "y",
+     main = "Posterior Predictive vs. Posterior von mu")
+
+# Band für mu (blau, schmal)
+polygon(c(x_seq, rev(x_seq)),
+        c(mu_q05, rev(mu_q95)),
+        col = rgb(0.2, 0.5, 1, 0.3), border = NA)
+
+# Band für y (rot, breit)
+polygon(c(x_seq, rev(x_seq)),
+        c(y_q05, rev(y_q95)),
+        col = rgb(1, 0.3, 0.3, 0.2), border = NA)
+
+lines(x_seq, y_q05,  col = "red",      lty = 2, lwd = 1.5)
+lines(x_seq, y_q95,  col = "red",      lty = 2, lwd = 1.5)
+lines(x_seq, mu_q05, col = "steelblue",lty = 2, lwd = 1.5)
+lines(x_seq, mu_q95, col = "steelblue",lty = 2, lwd = 1.5)
+
+# ML-Linie und Datenpunkte
+lines(x_seq, a_ml + b_ml * x_seq, col = "black", lwd = 2, lty = 1)
+points(x, y, pch = 19, col = "black", cex = 1.2)
+
+legend("topleft",
+       legend = c("Bayes mu Mittelwert", "90%-Band mu",
+                  "90%-Band y (Pred.)", "ML-Lösung", "Daten"),
+       col = c("steelblue", "steelblue", "red", "black", "black"),
+       lty = c(1, 2, 2, 1, NA), pch = c(NA, NA, NA, NA, 19), lwd = 2)
+```

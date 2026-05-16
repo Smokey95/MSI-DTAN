@@ -19,3 +19,5 @@
 
 # Ignore renderd html files
 *.html
+
+*.exe
