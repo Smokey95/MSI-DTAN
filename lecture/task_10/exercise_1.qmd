@@ -1,0 +1,129 @@
+---
+title: "exercise_01"
+output: html_document
+date: "2026-06-03"
+format:
+  html:
+    author: ""
+  pdf: default
+
+metadata-files:
+  - ../../.private.yml
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Modellierung des Corona-Ausbruchs in Deutschland im März 2020
+
+## Background
+
+Die Vorhersage der Anzahl infizierter Personen während eines Ausbruchs ist ein klassischer Anwendungsfall für die Bayes'sche Analyse. 
+Durch die Anwendung von Modellen wie dem SIR-Modell können wir Vorwissen über wichtige Parameter nutzen und unsere Schätzungen aktualisieren, sobald neue Daten vorliegen.
+
+- [https://mc-stan.org/users/documentation/case-studies/boarding_school_case_study.html](https://mc-stan.org/users/documentation/case-studies/boarding_school_case_study.html)
+- [https://science.sciencemag.org/content/369/6500/eabb9789](https://science.sciencemag.org/content/369/6500/eabb9789)
+
+In dieser Übung verfolgen wir einen einfacheren Ansatz und konzentrieren uns auf die erste COVID-19-Welle in Deutschland um März 2020. 
+Wir gehen davon aus, dass die durchschnittliche Fallzahl zu Beginn des Ausbruchs exponentiell ansteigt, was für die Frühphase einer Epidemie eine plausible Annahme ist.
+
+## a) Laden der Daten und Plotten
+Die allerersten Corona-Fälle in Deutschland standen im Zusammenhang mit dem Webasto-Cluster, der unter Kontrolle war und nicht zu einem exponentiellen Anstieg führte.
+Diese Daten stammen aus der Zeit um den 1. März 2020; es kam zu einem exponentiellen Anstieg, bis die Maßnahmen Wirkung zeigten.
+Wir betrachten die 20 Tage danach. Diese 20 Zeitpunkte sind im Trainings-Dataframe enthalten.
+
+Die Datei `corona_germany_first_wave.rda` kann unter http://www-home.htwg-konstanz.de/~oduerr/data/ mit dem folgenden Befehl heruntergeladen werden:
+
+```
+load(url('http://www-home.htwg-konstanz.de/~oduerr/data/corona_germany_first_wave.rda'))
+```
+
+Anmerkung: Falls Sie wissen möchten, wie die Daten erhoben wurden, können Sie sich hier informieren: https://github.com/oduerr/da/blob/master/corona/load_data.R
+
+Stellen Sie für die Trainingsdaten den Logarithmus der kumulativen Fallzahl `y` als Funktion der Tage `t` grafisch dar. Legen Sie eine Gerade in diese Darstellung. Ist die Annahme eines exponentiellen Wachstums zutreffend?
+
+
+```{r}
+# Daten laden
+load(url('http://www-home.htwg-konstanz.de/~oduerr/data/corona_germany_first_wave.rda'))
+
+# Überblick über die Daten
+str(training)
+head(training)
+
+# Log der kumulativen Fallzahl gegen Tage plotten
+plot(training$t, log(training$y),
+     xlab = "Tage (t)",
+     ylab = "log(kumulative Fälle)",
+     main = "COVID-19 Deutschland – erste Welle",
+     pch = 16, col = "steelblue")
+
+# Lineare Regression: log(y) ~ t
+fit <- lm(log(y) ~ t, data = training)
+#summary(fit)
+
+# Regressionsgerade in den Plot einlegen
+abline(fit, col = "red", lwd = 2)
+
+# Legende
+legend("topleft", legend = c("Beobachtungen", "Lineare Anpassung"),
+       col = c("steelblue", "red"), pch = c(16, NA), lty = c(NA, 1))
+```
+
+> **Interpretation:** Der Plot zeigt, dass die Punkte weitgehend auf einer Geraden liegen, was darauf hindeutet, dass die Annahme eines exponentiellen Wachstums in der Anfangsphase des Ausbruchs gerechtfertigt ist. Die rote Linie repräsentiert die lineare Anpassung, die den Trend der Daten gut beschreibt.
+
+## b) Modellierung der beobachteten Zählwerte
+Wir modellieren das exponentielle Wachstum. 
+Der Erwartungswert $\mu_t$ der kumulativen Fallzahl folgt einem exponentiellen Wachstum, wobei $t_0$ die Verdopplungszeit und $a$ die Fallzahl zu Beginn ist.
+
+$$
+\mu_t = a \cdot 2^{\frac{t}{t_0}}
+$$
+
+Die Zielvariable besteht aus Zählwerten, doch die Poisson-Verteilung ist oft zu restriktiv, da sie davon ausgeht, dass Mittelwert und Varianz gleich sind. 
+Stattdessen verwenden wir die negative Binomialverteilung, wie in dem zitierten Nature-Artikel (https://www.nature.com/articles/s41586-020-2405-7). 
+Die negative Binomialverteilung wird parametrisiert als $y \sim \text{negbinomial2}(\mu, \phi)$, wobei $E(\text{negbinomial2}(\mu_t, \phi)) = \mu_t$ gilt. Wir nehmen an, dass der Dispersionsparameter $\phi$ über die Zeit konstant ist und nicht von $t$ abhängt.
+
+In R erhält man diese Parametrisierung durch die Verwendung der Parameter `mu` und $size=\phi$. 
+Um ein Gefühl für die negative Binomialverteilung zu bekommen, experimentieren Sie mit den Parametern im folgenden Code.
+
+```{r}
+phi = 10000
+mu = 10
+xs = seq(0,50,1)
+plot(xs, dnbinom(xs, mu=mu,size=phi), type='h', main=paste0('mu ', mu, ' phi', phi))
+
+rnbinom(10, mu=mu,size=phi)
+
+
+phi = 10
+mu = 10
+xs = seq(0,50,1)
+plot(xs, dnbinom(xs, mu=mu,size=phi), type='h', main=paste0('mu ', mu, ' phi', phi))
+
+rnbinom(10, mu=mu,size=phi)
+
+
+phi = 1
+mu = 10
+xs = seq(0,50,1)
+plot(xs, dnbinom(xs, mu=mu,size=phi), type='h', main=paste0('mu ', mu, ' phi', phi))
+
+rnbinom(10, mu=mu,size=phi)
+```
+
+Für welchen Wert des Parameters $\phi$ entspricht die negative Binomialverteilung der Poisson-Verteilung?
+
+```{r}
+mu = 10
+xs = seq(0, 30, 1)
+
+# Vergleich NegBin (großes phi) vs. Poisson
+plot(xs, dnbinom(xs, mu=mu, size=10000), type='h', 
+     col='steelblue', main='NegBin (phi=10000) vs. Poisson', ylab='Wahrscheinlichkeit')
+points(xs + 0.3, dpois(xs, lambda=mu), type='h', col='red')
+legend("topright", legend=c("NegBin (phi=10000)", "Poisson"), col=c("steelblue","red"), lty=1)
+```
+
+> **Fazit**: Die negative Binomialverteilung entspricht der Poisson-Verteilung für $\phi \to \infty$. Im Beispielcode mit `phi = 10000` ist dieser Grenzfall praktisch bereits erreicht.
