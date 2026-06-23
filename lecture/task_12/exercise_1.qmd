@@ -1,0 +1,375 @@
+---
+title: "exercise_01"
+output: html_document
+date: "2026-06-17"
+format:
+  html:
+    author: ""
+  pdf: default
+
+metadata-files:
+  - ../../.private.yml
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Einfaches Regressionsmodell für Gewicht ~ Geschlecht
+
+## Hintergrundinformationen zu den Daten
+Der Datensatz stammt aus dem Buch „Statistical Rethinking“ von Richard McElreath und ist im Paket „rethinking“ verfügbar. 
+Er enthält die Körpergrößen und Gewichte von Angehörigen des Kalahari-Kung-San-Stammes, die von Nancy Howell erhoben wurden, und wurde so aufbereitet, dass er nur Erwachsene (Alter ≥ 18) umfasst. 
+
+Die Aufbereitung erfolgte wie folgt:
+
+```
+library(rethinking)
+library(here)
+# Load the Howell1 dataset from rethinking package
+data(Howell1)
+d <- Howell1
+dd2 <- d[d$age >= 18, ]
+
+# Store as csv
+write.csv(dd2, "howell1.csv", row.names = FALSE)
+```
+
+In dieser Kodierung steht 1 für das weibliche Geschlecht und 2 für das männliche Geschlecht. 
+Sie können die Daten ohne das „rethinking“-Paket mit dem folgenden Befehl laden:
+
+
+```{r}
+## Download and load the data
+url <- "https://raw.githubusercontent.com/oduerr/da/master/data/howell1.csv"
+dat <- read.csv(url)  
+```
+
+## a) Cauchy-Prior für die Standardabweichung
+Manchmal wird die Cauchy-Verteilung als Prior-Verteilung für Standardabweichungen oder andere Skalenparameter in bayesschen Modellen verwendet. 
+Dies ist insbesondere in hierarchischen Modellen üblich, wo eine Prior-Verteilung mit schweren Enden große Schwankungen zulässt, ohne dabei zu restriktiv zu sein. 
+Zur Vorbereitung auf die Vorlesung nächste Woche werden wir die Cauchy-Verteilung als Prior-Verteilung für die Standardabweichung in unserem Regressionsmodell verwenden.
+
+Die gute Nachricht: Sie kennen diese Verteilung bereits – sie entspricht der t-Verteilung mit einem Freiheitsgrad.
+
+Stellen Sie die Cauchy-Verteilung mit der Lage (*location*) 5 und der Skala 10 grafisch dar; dazu können Sie die Funktion `dcauchy` verwenden. 
+Die Cauchy-Verteilung ist wie folgt definiert: $$f(x) = \frac{1}{\pi} \frac{s}{(x - m)^2 + s^2}$$ wobei $m$ der Lageparameter (*location*) und $s$ der Skalenparameter ist.
+
+```{r}
+x <- seq(-50, 60, length.out = 1000)
+
+y_cauchy <- dcauchy(x, location = 5, scale = 10)
+y_normal <- dnorm(x, mean = 5, sd = 10)
+
+plot(x, y_cauchy,
+     type = "l",
+     col  = "steelblue",
+     lwd  = 2,
+     main = "Cauchy-Verteilung (location=5, scale=10)",
+     xlab = "x",
+     ylab = "Dichte")
+
+lines(x, y_normal,
+      col = "tomato",
+      lwd = 2,
+      lty = 2)
+
+abline(v = 5, lty = 2, col = "gray50")  # Lageparameter markieren
+
+legend("topright",
+       legend = c("Cauchy (loc=5, scale=10)", "Normal (mean=5, sd=10)"),
+       col    = c("steelblue", "tomato"),
+       lwd    = 2,
+       lty    = c(1, 2))
+```
+
+> **Erklärung:**
+>
+> - Der **Peak der Verteilung** liegt bei `x = 5` (location-Parameter)
+> - Zum Vergleich wurde im Plot noch die **Normalverteilung** mit demselben Mittelwert und derselben Standardabweichung dargestellt. Was dabei auffällt:
+>   - Die **Cauchy-Verteilung** hat **schwerere Enden** als die Normalverteilung, was bedeutet, dass sie größere/kleinere Werte mit höherer Wahrscheinlichkeit zulässt.
+>   - Die **Cauchy-Verteilung** ist flacher in der Mitte, aber die Enden fallen viel langsamer ab. Dadurch sind Extremwerte deutlich wahrscheinlicher. Genau das macht *Cauchy als Prior attraktiv*: er "bestraft" große $\sigma$-Werte nicht so stark wie ein Normal-Prior
+>   - Die **Normalverteilung** dagegen hat einen höheren, schmaleren Peak, sie konzentriert Wahrscheinlichkeit stärker um den Mittelpunkt wodurch extremere Werte weniger wahrscheinlich sind.
+
+> **Warum Caunchy als Prior für $\sigma$?**
+>
+> In hierarchischen Modellen kann es vorkommen, dass die Daten nicht genügend Informationen liefern, um die Standardabweichung genau zu schätzen. Ein Cauchy-Prior mit schweren Enden ermöglicht es dem Modell, größere Werte für $\sigma$ zuzulassen, ohne sie zu stark zu bestrafen. Für die Standardabweichung $\sigma$ wird jedoch nur die positive Hälfte der Cauchy-Verteilung verwendet, da $\sigma$ nicht negativ sein kann.
+
+## b) Einfaches Regressionsmodell
+Wir modellieren das Körpergewicht $W$ als Funktion des binären Geschlechts (kodiert als `1 = weiblich`, `2 = männlich`) für $N$ Individuen. 
+Für das folgende Regressionsmodell gilt: $$W_i \sim \mathcal{N}(\mu_i, \sigma^2) \quad \text{mit} \;\; \mu_i = a[sex[i]]$$
+
+> **Erklärung Regressionsmodell:**
+>
+> - Jede Person $i$ hat ein Gewicht $W_i$, das normalverteilt ist
+> - Der Mittelwert $\mu_i$ hängt vom Geschlecht der Person ab, entweder:
+>    - $a[1]$ für Frauen oder
+>    - $a[2]$ für Männer
+> - `a` ist also ein Vektor mit zwei Werten, durchschnittliche Gewichte je Geschlecht
+> - `sigma` ist gemeinsame Streuung (gleich für beide Gruppen)
+
+Verwende den untenstehenden Stan-Code als Vorlage und fülle die fehlenden Teile aus.
+
+### Stan Code
+Im ersten Schritt wird der Stan Code vervollständigt.
+
+#### Prior für `a`
+`a` ist der mittlere Gewichtswert je Gruppe. Erwachsene Personen aus den Daten wiegen typischerweise 40-70 kg. Daher ist ein schwach informativer Normal-Prior sinnvoll mit:
+
+```
+a ~ normal(55, 20);
+```
+> Zentrum bei 55kg, mit viel Spielraum
+
+#### Prior für `sigma`
+Für `sigma` wird nun der **Cauchy-Prior** aus Aufgabe a) genutzt. Da `sigma > 0` (durch `lower=0` erzwungen), wirkt das automatisch als **Half-Cauchy**:
+
+```
+sigma ~ cauchy(0, 10);
+```
+
+```
+data {
+  int<lower=1> N;
+  vector[N] W;
+  array[N] int sex; 
+}
+
+parameters {
+  real<lower=0> sigma;
+  vector[2] a;
+}
+
+model {
+  vector[N] mu_i;
+  
+  // Compute individual means based on group
+  for (i in 1:N) {
+    mu_i[i] = a[sex[i]];
+  }
+
+  // TODO: Prior for a
+  a ~ normal(60, 20);           // Prior: mittleres Gewicht je Gruppe
+
+  // TODO: Prior for sigma
+  sigma ~ cauchy(0, 10);        // Prior: Streuung (Half-Cauchy)
+
+  // TODO: Likelihood for W     // Likelihood
+  W ~ normal(mu_i, sigma);
+}
+```
+
+und führen das Modell ausführen.
+
+### Model ausführen
+```{r}
+suppressMessages(suppressWarnings(library(rstan))) # Meldungen der Lib. unterdrücken
+library(rstan)
+
+# Daten laden
+url <- "https://raw.githubusercontent.com/oduerr/da/master/data/howell1.csv"
+dat <- read.csv(url)
+
+# Stan-Daten vorbereiten
+stan_data <- list(
+  N   = nrow(dat),
+  W   = dat$weight,
+  sex = dat$male + 1   # im Datensatz: 0=Frau, 1=Mann -> umkodieren zu 1=Frau, 2=Mann
+)
+
+# Modell kompilieren und samplen
+fit <- stan(
+  file       = "model.stan",
+  data       = stan_data,
+  chains     = 4,
+  iter       = 2000,
+  warmup     = 1000,
+  seed       = 42,
+  refresh = 0   # unterdrückt Ausgabe
+)
+
+# Übersicht
+print(fit, pars = c("a", "sigma"))
+```
+
+> **Hinweis zur Zusammenfassung**
+>
+> Die Zusammenfassung gibt erste relevante Daten die auch in der Bewertung in Abschnitt c) noch wichtig werden:
+>
+> - `mean`: Posterior-Mittelwert
+> - `sd`: Posterior-Standardabweichung
+> - 2.5%, 50%, 97.5%: Kredibilitätsintervall
+> - `n_eff`: effektive Stichprobengröße (sollte > 400 sein)
+> - `Rhat` — Konvergenzmaß (sollte ≈ 1.00 sein, Warnung bei > 1.01)
+
+## c) Prüfen der Passform
+Sehen Sie sich die Kurvendiagramme und die Zusammenfassung der Anpassung an und äußern Sie sich zur Modellanpassung.
+
+### Trace Plot
+```{r}
+traceplot(fit, pars = c("a", "sigma"))
+```
+
+> **Bewertung Trace Plot**:
+>
+> Die Trace-Plots sollten wie in der VL besprochen wie **fuzzy caterpillars** aussehen, also gleichmäßiges Rauschen ohne erkennbare Trends.
+
+### Posterior Dichten
+```{r}
+stan_dens(fit, pars = c("a", "sigma"))
+```
+
+### Bewertung
+Anbei die Bewertung der oben gezeigten Abbildungen und Ausgaben:
+
+- `Rhat` ist ungefähr 1: Das bedeutet, dass die verschiedenen MCMC-Ketten zum gleichen Ergebnis konvergiert sind.
+- `n_eff` ist ausreichend groß (> 3000)
+- Die Trace-Plots haben sowohl für Frauen `a[1]` als auch Männer `a[2]` und `sigma` die Form eines **fuzzy caterpillars**. Hier ist also kein klarer Trend zu erkennen was positiv ist
+- Die Posteriori Dichten zeigen:
+  - Im Mittel sind Frauen (`a[1]`) etwa 42kg schwer. Dies wäre für die Alterspanne bei heutigen Daten im zentral Europäischen Raum wahrscheinlich eher zu niedrig, für eine indigene Bevölkerung aber wahrscheinlich in Ordnung.
+  - Männer (`a[2`]) dagegen sind etwa 6 bis 7kg schwerer als Frauen was ebenfalls zur Erwartung passt
+  - Auch die Sigma Verteilung ist plausibel
+
+## d) Vergleiche die a-posteriori-Verteilungen der Gewichte von Frauen und Männern
+Daraus lässt sich schließen, dass Männer im Durchschnitt schwerer sind als Frauen – siehe die Posterior-Verteilungen.
+
+```{r}
+samples <- extract(fit)
+
+# Posterior-Samples für beide Gruppen
+a_women <- samples$a[, 1]
+a_men   <- samples$a[, 2]
+
+d_women <- density(a_women)
+d_men   <- density(a_men)
+
+# Leeren Plot aufspannen
+plot(NULL,
+     xlim = range(c(d_women$x, d_men$x)),
+     ylim = range(c(0, d_women$y, d_men$y)),
+     main = "Posterior-Verteilung: Mittleres Gewicht",
+     xlab = "Gewicht (kg)",
+     ylab = "Dichte")
+
+# Gefüllte Flächen (halbtransparent)
+polygon(d_women, col = adjustcolor("tomato",    alpha = 0.4), border = NA)
+polygon(d_men,   col = adjustcolor("steelblue", alpha = 0.4), border = NA)
+
+# Konturen oben drauf
+lines(d_women, col = "tomato",    lwd = 2)
+lines(d_men,   col = "steelblue", lwd = 2)
+
+legend("topleft",
+       legend = c("Frauen (a[1])", "Männer (a[2])"),
+       fill   = adjustcolor(c("tomato", "steelblue"), alpha = 0.4),
+       border = NA)
+```
+
+Zur besseren Bewertung wurde die Posterior-Verteilung von Männern und Frauen nochmal erneut in einem Graph geplottet. An diesem ist ersichtlich, dass Männer wie in der Aufgabenbeschreibung vermutet ein höheres Gewicht als Frauen haben. Diese liegen sogar soweit auseinander, dass sich diese nicht Überschneiden. 
+
+## e) Posterior-Vorhersageverteilung
+Bedeutet das, dass jeder Mann schwerer ist als jede Frau? 
+Um diese Frage zu beantworten, können wir die a-posteriori-Prädiktionsverteilung heranziehen.
+
+Wir werden Stichproben aus der a-posteriori-Verteilung der Gewichte ziehen und die a-posteriori-Prädiktionsverteilung für beide Geschlechter grafisch darstellen.
+
+### Posterior der Parameter (d) v.s. Posterior-Prädiktionsverteilung
+Im Aufgabenteil d) wurden nur die Mittelwerte verglichen. Die Prädiktionsverteilung addiert hierzu noch die individuelle Streuung $\sigma$ dazu wodurch mehr Überlappung entsteht.
+
+Die wichtigsten Unterschiede sollen in der folgenden Tabelle verdeutlicht werden:
+
+|    | d) Posterior der Parameter | e) Posterior-Prädiktionsverteilung |
+|:---|:---|:---|
+|**Was?**| Verteilung von `a[1]`, `a[2]` | Verteilung eines **neuen Einzelgewichts** |
+|**Berücksichtigt $\sigma$** | Nein | Ja |
+|**Frage**| Sind Männer im Schnitt schwerer? | Ist ein zufälliger Mann schwerer als eine zufällige Frau? |
+
+### Schritt 1 — Predictive Samples ziehen
+
+Im ersten Schritt wird für jede Posterior-Stichprobe von `a[1]`, `a[2]` und `sigma` simulierte Einzelgewichte gezogen.
+
+```{r}
+samples <- extract(fit)
+
+n_samples <- length(samples$sigma)
+
+# Für jede Posterior-Stichprobe ein simuliertes Gewicht ziehen
+w_pred_women <- rnorm(n_samples, mean = samples$a[, 1], sd = samples$sigma)
+w_pred_men   <- rnorm(n_samples, mean = samples$a[, 2], sd = samples$sigma)
+```
+
+> **Was passiert hier genau?**
+>
+> Angenommen wir haben nach dem Sampling z.B. 3000 Posterior-Stichproben. Jede Stichprobe `i` enthält einen konkreten Wert für `a[1]_i` und `sigma_i`:
+>
+> | Stichprobe i | a[1]_i | sigma_i | gezogenes Gewicht |
+> |:-------------|:-------|:--------|:------------------|
+> | 1            | 44.3 kg| 6.1 kg  | $\rightarrow$ rnorm(1, 44.3, 6.1) = 39.7 |
+> | 2            | 45.1 kg| 5.8 kg  | $\rightarrow$ rnorm(1, 45.1, 5.8) = 48.2 |
+> | 3            | 43.9 kg| 6.4 kg  | $\rightarrow$ rnorm(1, 43.9, 6.4) = 41.5 |
+> | ...          | ...    | ...     | ...                                      |
+>
+> Für jede dieser 3000 Stichproben ziehen wir jetzt ein simuliertes Einzelgewicht:
+>$$W_{\text{neu}} \sim \mathcal{N}(a[1]_i, \sigma_i)$$
+> Also für Stichprobe 1: ziehe eine Zahl aus Normal(44.3, 6.1), könnte z.B. 39.7 kg herauskommen.
+
+### Schritt 2 — Grafisch darstellen
+
+Wie in der vorherigen Aufgabe werden diese Verteilungen nun grafisch dargestellt. Hierbei fällt auf, dass auch wenn die Verteilungen im Mittel (auf Gruppenebene) stark auseinander liegt, es auf Individualebene viele Ausnahmen gibt und die Verteilungen so näher beieinander liegen.
+
+```{r}
+d_pred_women <- density(w_pred_women)
+d_pred_men   <- density(w_pred_men)
+
+plot(NULL,
+     xlim = range(c(d_pred_women$x, d_pred_men$x)),
+     ylim = range(c(0, d_pred_women$y, d_pred_men$y)),
+     main = "Posterior-Prädiktionsverteilung: Einzelgewichte",
+     xlab = "Gewicht (kg)",
+     ylab = "Dichte")
+
+polygon(d_pred_women, col = adjustcolor("tomato",    alpha = 0.4), border = NA)
+polygon(d_pred_men,   col = adjustcolor("steelblue", alpha = 0.4), border = NA)
+
+lines(d_pred_women, col = "tomato",    lwd = 2)
+lines(d_pred_men,   col = "steelblue", lwd = 2)
+
+legend("topleft",
+       legend = c("Frauen (Vorhersage)", "Männer (Vorhersage)"),
+       fill   = adjustcolor(c("tomato", "steelblue"), alpha = 0.4),
+       border = NA)
+```
+
+### Wie oft ist ein zufälliger Mann schwerer als eine zufällige Frau?
+```{r}
+p_mann_schwerer <- mean(w_pred_men > w_pred_women)
+cat("P(Mann schwerer als Frau):", round(p_mann_schwerer, 3), "\n")
+```
+
+## Optionale Teile
+Schauen Sie sich die einzelnen Teile einmal an und versuchen Sie, sie zu lösen, wenn Sie möchten. 
+Dadurch bekommen Sie ein besseres Gespür für die Bayes’sche Statistik, was für hierarchische Modelle jedoch nicht unbedingt erforderlich ist.
+
+### f) A-priori vs. a-posteriori – Wie wichtig ist das A-priori?
+
+Bei der bayesschen Inferenz drückt die Priorverteilung unsere Überzeugungen aus, bevor wir die Daten sehen. 
+Aber wie groß ist ihr Einfluss tatsächlich? 
+
+In dieser Übung untersuchen wir, wie sich die Datenmenge auf den Einfluss der Priorverteilung auswirkt. 
+
+Dazu analysieren wir, wie sich die a-posteriori-Verteilung für $\sigma$ entwickelt, wenn wir das Modell nur mit einer Teilmenge der Daten anpassen (verwende 5, 10, 20 Prozent und alle Daten), und zwar nur die obersten Zeilen. Füge auch die A-priori-Verteilung in die Grafik ein (siehe Übung a).
+
+### g) [Optional, falls Sie mit QQ-Diagrammen vertraut sind] Überprüfung der Normalverteilung der a-posteriori-Vorhersageverteilungen
+Wiederholen Sie Schritt f), verwenden Sie diesmal jedoch ein QQ-Diagramm, um die Normalität der a-posteriori-Prädiktionsverteilungen für $\sigma$ zu überprüfen.
+
+### t-test
+Wenn Sie mit dem t-Test vertraut sind, wird Ihnen diese Übung den direkteren bayesschen Ansatz im Vergleich zum indirekten Ansatz der Nullhypothesenprüfung in der frequentistischen Statistik verdeutlichen.
+Wir verwenden nur eine sehr kleine Teilmenge der Daten: N = 6 Personen.
+Ihre Aufgabe:
+Führen Sie eine bayessche Analyse unter Verwendung des zuvor vorgestellten Stan-Modells durch. Extrahieren Sie die a-posteriori-Stichproben für die Parameter a[1] und a[2], die das Durchschnittsgewicht von Frauen bzw. Männern darstellen.
+Schätzen Sie anhand der posterioren Stichproben Ihren Grad der Überzeugung, dass Männer schwerer sind als Frauen.
+Führen Sie einen klassischen einseitigen t-Test mit t.test() durch, um die Nullhypothese zu testen, dass Männer und Frauen das gleiche Durchschnittsgewicht haben, gegenüber der Alternativhypothese, dass Männer schwerer sind.
+Vergleichen Sie die Interpretation des frequentistischen p-Werts mit der bayesschen posterioren Wahrscheinlichkeit.
+
+
+
