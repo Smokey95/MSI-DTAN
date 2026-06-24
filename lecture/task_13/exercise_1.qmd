@@ -1,0 +1,285 @@
+---
+title: "exercise_01"
+output: html_document
+date: "2026-05-24"
+format:
+  html:
+    author: ""
+  pdf: default
+
+metadata-files:
+  - ../../.private.yml
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Analysis — Week 13 (Bayes 7)
+Hierarchical Poisson model for the Bundesliga
+
+## Modelling the Bundesliga
+
+We model the goals scored in matches of the Bundesliga 2025/26 season (18 teams) with a hierarchical Poisson model. Every team $j$ has a latent attack strength $\text{att}_j$ and defense strength $\text{def}_j$.
+
+For a match between a home team $h$ and an away team $a$ the goals are
+
+$$\text{goals}_{\text{home}} \sim \text{Poisson}(e^{\mu + \text{home\_adv} + \text{att}_h - \text{def}_a})$$
+
+$$\text{goals}_{\text{away}} \sim \text{Poisson}(e^{\mu + \text{att}_a - \text{def}_h})$$
+
+with a shared home advantage `home_adv` and baseline log rate `mu`. The team abilities are partially pooled, $\text{att}_j \sim \mathcal{N}(0, \sigma_{\text{att}})$ and $\text{def}_j \sim \mathcal{N}(0, \sigma_{\text{def}})$, with half-normal hyperpriors on $\sigma_{\text{att}}$, $\sigma_{\text{def}}$. The model is given in `bundesliga_hier.stan`.
+
+The data are described in `bundesliga_labeled/dataset.md`: a temporal split into 207 training matches (first part of the season) and 99 test matches (held out, later part). `teams.csv` maps the integer team ids 1..18 to the club names.
+
+### Loading the data and fitting the model
+
+```{r}
+suppressMessages(library(cmdstanr))
+library(cmdstanr)
+suppressMessages(library(posterior))
+library(posterior)
+suppressMessages(library(tidybayes))
+library(tidybayes)
+suppressMessages(library(ggplot2))
+library(ggplot2)
+suppressMessages(library(ggrepel))
+library(ggrepel)
+suppressMessages(library(dplyr))
+library(dplyr)
+suppressMessages(library(tidyr))
+library(tidyr)
+
+base <- "C:/Projects/MSI-DTAN/lecture/task_13/bundesliga_labeled"
+train <- read.csv(file.path(base, "train.csv"))
+test <- read.csv(file.path(base, "protected", "test.csv"))
+teams <- read.csv(file.path(base, "teams.csv"))
+J <- nrow(teams)
+
+stan_data <- list(
+  N_train = nrow(train), N_test = nrow(test), J = J,
+  home_train = train$home_team_id, away_train = train$away_team_id,
+  goals_home_train = train$home_goals, goals_away_train = train$away_goals,
+  home_test = test$home_team_id, away_test = test$away_team_id,
+  goals_home_test = test$home_goals, goals_away_test = test$away_goals
+)
+
+mod <- cmdstan_model("C:/Projects/MSI-DTAN/lecture/task_13/bundesliga_hier.stan")
+fit <- mod$sample(data = stan_data, 
+                  seed = 123,
+                  chains = 4, 
+                  parallel_chains = 4,
+                  iter_warmup = 1000, 
+                  iter_sampling = 1000, 
+                  refresh = 0)
+print(fit)
+```
+
+# Tasks
+
+## Task 0 — Understand the model
+
+Öffnen Sie die Datei `bundesliga_hier.stan` und vergewissern Sie sich, dass Sie das hierarchische Modell verstanden haben. Insbesondere:
+
+- Was bedeuten die Parameter `attack[j]`, `defense[j]`, `home_adv` und `mu`?
+
+> `attack[j]`: **Angriffsstärke von Team `j`**:
+>
+> Beschreibt, wie viel mehr oder weniger Tore Team `j` im Angriff erzielt als der Liga-**Durchschnitt**. Ein positives `attack[j]` bedeutet ein überdurchschnittlich starkes Team im Angriff (z.B. Bayern München), ein negatives bedeutet schwächer als der Durchschnitt.
+
+> `defense[j]`: **Defensivstärke von Team j**:
+>
+> Analog zu `attack[j]`: wie gut Team `j` Gegentore verhindert, relativ zum **Durchschnitt**. Ein positives `defense[j]` bedeutet eine starke Defensive (das Team lässt weniger Tore zu als der Schnitt). Es geht mit einem Minus-Zeichen in die gegnerische Rate ein.
+
+> `home_adv`: **Heimvorteil**:
+>
+> Ein einzelner, für alle Teams gleicher Parameter, der ausdrückt, um wie viel (auf Log-Skala) die Heimmannschaft mehr Tore schießt als eine Auswärtsmannschaft gleicher Stärke. Da er zur Heimrate addiert wird `(exp(mu + home_adv + ...))`, erwartet man `home_adv > 0`.
+
+> `mu`: **Baseline-Log-Rate**:
+>
+> `mu` ist der gemeinsame Erwartungswert (auf Log-Skala) für alle Tore in der Liga. Er stellt quasi das "durchschnittliche Toreniveau" der gesamten Bundesliga dar. Da die Poisson-Rate als `exp(mu + ...)` definiert ist, entspricht `exp(mu)` der erwarteten Toranzahl eines hypothetischen Spiels zweier gleichstarker Teams ohne Heimvorteil.
+
+---
+
+- Warum erhalten Angriff und Verteidigung eine gemeinsame Priorverteilung, deren Skala (`sigma_att`, `sigma_def`) selbst geschätzt wird? Welche Rolle spielt „Partial Pooling“ hier?
+
+> **Das Problem ohne Pooling**
+>
+> Angenommen, wir hätten für jedes der 18 Teams einen völlig unabhängigen Parameter `attack[j]`. Mit z.B. nur 10–15 Heimspielen pro Team in den Trainingsdaten wäre jeder dieser Parameter sehr unsicher und wir würden Überanpassung an Zufallsschwankungen riskieren (ein Team schießt mal zufällig viele Tore und wird als "super stark" eingestuft).
+
+> **Das Pooling-Prior**:
+>
+>  Im Modell steht:
+>
+> `attack  ~ normal(0, sigma_att);   // alle 18 Werte aus derselben Verteilung`
+>
+> `defense ~ normal(0, sigma_def);`
+>
+> Das bedeutet: alle Angriffsstärken werden als Stichprobe aus einer gemeinsamen Normalverteilung modelliert. Die Breite `sigma_att` kontrolliert, wie weit die Teams auseinanderliegen dürfen (bei uns ist die Standardabweichung 0.5)
+
+> **Warum wird `sigma_att` selbst geschätzt?**
+>
+> Weil man vorab nicht weiß, wie heterogen die Liga ist. Der Hyperprior `sigma_att ~ normal(0, 0.5)` ist nur ein schwacher Regularisierungs-Prior. Der tatsächliche Wert von `sigma_att` wird aus den Daten gelernt. aus der Frage: "Wie unterschiedlich sind die 18 Teams wirklich?"
+
+> **Was macht Partial Pooling konkret?**
+>
+> Es ist ein Kompromiss zwischen zwei Extremen:
+>
+> | Extrem | Effekt |
+> |:-------|:-------|
+> |No pooling `(sigma_att → ∞)`|Jedes Team wird völlig unabhängig geschätzt — reine Überanpassung|
+> |Complete pooling `(sigma_att → 0)`|Alle Teams sind identisch — zu starke Vereinfachung|
+|Partial pooling (sigma wird geschätzt)| wird geschätzt)	Schwache Teams werden Richtung Ligadurchschnitt gezogen (Shrinkage), starke Teams bleiben stark, aber abgemildert|
+>
+> Praktisch: Ein Team mit wenigen Spielen und zufällig vielen Toren wird nicht als "weltklasse" eingestuft, sondern zur Mitte hin gezogen — weil der Prior sagt: "Es ist unwahrscheinlich, dass ein Team extrem weit vom Schnitt abweicht." Je mehr Daten ein Team hat, desto weniger zieht der Prior.
+
+---
+
+- Warum wird die Verteidigung mit einem Minuszeichen in die Quote einbezogen?
+
+> **Die Intuition**
+>
+> Die erwarteten Tore der Heimmannschaft hängen von zwei Dingen ab:
+> 
+> - der **Angriffsstärke des Heimteams** → `+ attack[home]`
+> - der **Defensivstärke des Auswärtsteams** → `- defense[away]`
+>
+> Eine starke Verteidigung des Gegners reduziert die erwarteten Tore, deshalb das Minus. Je größer `defense[away]`, desto kleiner wird `lambda_home`, desto weniger Tore schießt das Heimteam
+
+> **Konvention**
+>
+> Durch das Minus-Zeichen gilt: Ein Team mit positivem `defense[j]` lässt weniger Gegentore zu als der Durchschnitt (gute Defensive), ein Team mit negativem `defense[j]` ist defensiv schwächer.
+>
+> Man hätte defense auch als "Schwäche" definieren können (positiv = schlechte Defensive) und es dann addieren. Beides wäre mathematisch äquivalent. Die gewählte Konvention ist aber intuitiver: sowohl `attack[j]` als auch `defense[j]` bedeuten "größer = besser", das erleichtert den Scatter-Plot in Task 2, wo rechts oben die stärksten Teams stehen
+
+---
+
+- Das Modell ist nur bis auf eine konstante Verschiebung zwischen `mu` und den Fähigkeiten identifiziert. Welcher Teil des Modells sorgt dennoch dafür, dass die Anpassung gut funktioniert?
+
+> **Das Problem**
+>
+> Die Rate ist in dem Modell wie folgt definiert:
+>
+> `lambda_home = exp(mu + home_adv + attack[home] - defense[away])`
+>
+> Wenn wir jeden` attack[j]` um eine Konstante `c` erhöhen und gleichzeitig jeden `defense[j]` um `c` erhöhen, ändert sich `lambda` überhaupt nicht
+>
+> `(attack[j] + c) - (defense[j] + c) = attack[j] - defense[j]`
+>
+> Ebenso: wenn wir alle `attack[j]` um `c` verschieben und `mu` um `-c` korrigieren, bleibt die Likelihood identisch. Das Modell hat also eine additive Nicht-Identifizierbarkeit, unendlich viele Parameterkombinationen beschreiben dieselbe Verteilung über Tore.
+
+> **Was hält das Modell trotzdem stabil?**
+>
+> Der Partial-Pooling-Prior:
+>
+> `attack  ~ normal(0, sigma_att)`
+>
+> `defense ~ normal(0, sigma_def)`
+>
+> Dieser Prior zwingt die Attack- und Defense-Werte, im Mittel **nahe bei 0** zu liegen. Dadurch wird die additive Freiheit ("schieb alles um c") automatisch bestraft, ein Shift aller Werte weg von 0 ist unter dem Prior unwahrscheinlich. Der Prior übernimmt also die Rolle einer Soft-Constraint, die das Modell verankert, ohne eine harte Summen-Null-Restriktion wie `sum(attack) = 0` zu brauchen.
+
+> **Praktische Konsequenz**
+>
+> Der MCMC-Sampler kann trotzdem konvergieren, weil der Prior eine eindeutige Posterior-Mitte erzeugt. Ohne Prior (oder mit sehr flachen Priors) würden die Chains für mu und `attack[j]` gegenläufig driften — das wäre in den Trace-Plots als langsames "Wandern" der Chains sichtbar.
+
+## Task 1 — Fit and check convergence
+
+Fit the model and check that it has converged. Look at `fit$summary()` for `home_adv`, `mu`, `sigma_att`, `sigma_def` (and a few attack/defense entries). Are `rhat` close to 1 and the effective sample sizes large enough? Show a trace plot (`bayesplot::mcmc_trace`) for at least `home_adv` and `mu`.
+
+```{r}
+# Summary für die globalen Parameter + ein paar Team-Parameter
+fit$summary(variables = c("home_adv", "mu", "sigma_att", "sigma_def",
+                          "attack[1]", "attack[2]", "defense[1]", "defense[2]"))
+```
+
+> **Ergebniss**:
+>
+> Die Übersicht zeigt etliche Parameter welche einen ersten Eindruck geben, besonders wichtig ist hierbei:
+>
+> | Spalte | Bedeutung | Kriterium |
+> |:-------|:----------|:----------|
+> | `rhat` | Gelman-Rubin-Statistik: vergleicht Varianz zwischen Chains mit Varianz innerhalb | `rhat ~ 1.0` gilt als konvergiert |
+> | `ess_bulk` | Effektive Stichprobengröße im "Bulk" der Verteilung | Faustformel: `> 400` (bei 4×1000 Draws) |
+> | `ess_tail` | Effektive Stichprobengröße in den Rändern | ebenfalls `> 400` |
+
+```{r}
+library(bayesplot)
+# Trace-Plot für home_adv und mu
+draws_array <- fit$draws(format = "array")
+
+mcmc_trace(draws_array, pars = c("home_adv", "mu")) +
+  ggtitle("Trace plots — home_adv und mu")
+```
+
+### Task 2 — Describe the Bundesliga: attack vs defense
+
+For every team, compute the posterior mean and standard deviation of its attack and defense strength. Make a single scatter plot with mean attack on the x-axis and mean defense on the y-axis, one labelled point per team (team names from `teams.csv`), and add error bars of ±1 posterior sd in both directions.
+
+Then describe the league: which quadrant holds the strongest teams (good attack and good defense)? Where is the champion (Bayern Munich), and are its error bars clearly separated from the rest?
+
+**Hint:** a larger `defense[j]` means the team concedes fewer goals (it enters with a minus sign), so "high defense = good defense"; top-right of the plot = strong in both.
+
+```{r}
+# Task 2 — Attack vs Defense Scatter-Plot
+
+# Posterior-Draws für attack und defense extrahieren
+att_summary <- fit$summary(variables = paste0("attack[", 1:J, "]")) |>
+  mutate(team_id = 1:J) |>
+  select(team_id, att_mean = mean, att_sd = sd)
+
+def_summary <- fit$summary(variables = paste0("defense[", 1:J, "]")) |>
+  mutate(team_id = 1:J) |>
+  select(team_id, def_mean = mean, def_sd = sd)
+
+# Mit Teamnamen zusammenführen
+plot_data <- att_summary |>
+  left_join(def_summary, by = "team_id") |>
+  left_join(teams, by = "team_id")
+
+# Scatter-Plot mit Fehlerbalken
+ggplot(plot_data, aes(x = att_mean, y = def_mean, label = team_name)) +
+  geom_errorbar(aes(ymin = def_mean - def_sd, ymax = def_mean + def_sd),
+                width = 0, color = "gray60") +
+  geom_errorbarh(aes(xmin = att_mean - att_sd, xmax = att_mean + att_sd),
+                 height = 0, color = "gray60") +
+  geom_point(size = 2) +
+  geom_text_repel(size = 3, max.overlaps = 20) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = "Attack strength (posterior mean)",
+       y = "Defense strength (posterior mean)",
+       title = "Bundesliga 2025/26 — Team abilities") +
+  theme_minimal()
+```
+
+### Task 3 — Predict a future match and score its NLPD
+
+Pick a match from the test set (a future match the model has not seen). A nice one is row 5: Borussia Dortmund vs Bayern Munich (Der Klassiker).
+
+**a)** Using the posterior-predictive draws (`goals_home_rep`, `goals_away_rep` for that test row), show the predicted distribution of the score (e.g. the most likely home and away goals) and compare it with the actual result.
+
+**b)** Compute the NLPD (negative log predictive density / NLL) of the observed match, i.e. the negative log-likelihood that the fitted model assigns to the two observed goal counts. Use the `log_lik` vector: for test row $n$, entry $n$ is the home-goal log-likelihood and entry $N_{\text{test}} + n$ is the away-goal log-likelihood. Report the per-match NLPD (sum of the two components, averaged over the posterior draws).
+
+### Task 4 — Probability that team A beats team B
+
+For a future fixture of your choice (give an example — e.g. Bayern Munich winning away at Borussia Dortmund, which is exactly the test match above), use the posterior-predictive goal draws to estimate the probability of a home win, a draw, and an away win. State the probability that your chosen team wins.
+
+**Bonus:** show how you would compute the same probabilities for an arbitrary fixture (any pair of teams, either as home) by reconstructing the two Poisson rates from the posterior draws of attack, defense, `home_adv`, `mu` in R.
+
+### Optional — Overall predictive performance
+
+Compute the average test NLPD over all 99 test matches (`-mean` of the `log_lik` draws) as a single summary of out-of-sample predictive quality.
+
+### Optional 2 — Automatic model search with Claude Code
+
+*(Only if you have access to Claude Code.)* Let an agent automatically research a better model.
+
+Give it this prompt:
+
+> You are improving a Stan model that predicts Bundesliga goals. The model is in `bundesliga_hier.stan`, fit on `bundesliga_labeled/train.csv`; the held-out matches are in `bundesliga_labeled/protected/test.csv` (team ids in `teams.csv`). The generated quantities block returns the pointwise test log-likelihood `log_lik` (length `2*N_test`).
+>
+> /goal minimise the average test NLPD = `-mean(log_lik)`.
+>
+> Work iteratively: propose one modelling improvement at a time. Report each step and finish with the best model and its test NLPD. Stop after 20 iterations or if the agent cannot find a better model. Use the `log_lik` from the final model to compute the average test NLPD.
+
+Compare what the agent finds against the baseline NLPD from the Optional task above.
