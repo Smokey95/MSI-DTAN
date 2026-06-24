@@ -184,7 +184,8 @@ print(fit)
 
 ## Task 1 — Fit and check convergence
 
-Fit the model and check that it has converged. Look at `fit$summary()` for `home_adv`, `mu`, `sigma_att`, `sigma_def` (and a few attack/defense entries). Are `rhat` close to 1 and the effective sample sizes large enough? Show a trace plot (`bayesplot::mcmc_trace`) for at least `home_adv` and `mu`.
+Fitten Sie das Modellanpassung und überprüfen Sie, ob das Modell konvergiert ist. Sehen Sie sich in `fit$summary()` die Werte für `home_adv`, `mu`, `sigma_att`, `sigma_def` (sowie einige Einträge zu Angriff und Verteidigung) an. Liegen die `rhat`-Werte nahe bei 1 und sind die effektiven Stichprobengrößen groß genug? Zeigen Sie einen Trace-Plot (`bayesplot::mcmc_trace`) zumindest für `home_adv` und `mu` an.
+
 
 ```{r}
 # Summary für die globalen Parameter + ein paar Team-Parameter
@@ -203,7 +204,9 @@ fit$summary(variables = c("home_adv", "mu", "sigma_att", "sigma_def",
 > | `ess_tail` | Effektive Stichprobengröße in den Rändern | ebenfalls `> 400` |
 
 ```{r}
+suppressMessages(library(bayesplot))
 library(bayesplot)
+
 # Trace-Plot für home_adv und mu
 draws_array <- fit$draws(format = "array")
 
@@ -211,13 +214,17 @@ mcmc_trace(draws_array, pars = c("home_adv", "mu")) +
   ggtitle("Trace plots — home_adv und mu")
 ```
 
-### Task 2 — Describe the Bundesliga: attack vs defense
+> **Ergebnis**:
+>
+> Der Traceplot sollte auch hier wieder die Raupenstruktur aufweisen, also keinen erkennbaren Trend einzelner Chains in eine Richtung
 
-For every team, compute the posterior mean and standard deviation of its attack and defense strength. Make a single scatter plot with mean attack on the x-axis and mean defense on the y-axis, one labelled point per team (team names from `teams.csv`), and add error bars of ±1 posterior sd in both directions.
+### Aufgabe 2 – Beschreibe die Bundesliga: Angriff vs. Verteidigung
 
-Then describe the league: which quadrant holds the strongest teams (good attack and good defense)? Where is the champion (Bayern Munich), and are its error bars clearly separated from the rest?
+Berechne für jede Mannschaft den a-posteriori-Mittelwert und die a-posteriori-Standardabweichung ihrer Offensiv- und Defensivstärke. Erstelle ein einziges Streudiagramm mit dem Mittelwert der Offensivstärke auf der x-Achse und dem Mittelwert der Defensivstärke auf der y-Achse, wobei jede Mannschaft durch einen beschrifteten Punkt dargestellt wird (Mannschaftsnamen aus `teams.csv`), und füge in beide Richtungen Fehlerbalken von ±1 a-posteriori-Standardabweichung hinzu.
 
-**Hint:** a larger `defense[j]` means the team concedes fewer goals (it enters with a minus sign), so "high defense = good defense"; top-right of the plot = strong in both.
+Beschreiben Sie nun die Liga: In welchem Quadranten befinden sich die stärksten Mannschaften (guter Angriff und gute Verteidigung)? Wo steht der Meister (Bayern München), und heben sich seine Fehlerbalken deutlich vom Rest ab?
+
+**Hinweis:** Ein höherer Wert für `defense[j]` bedeutet, dass die Mannschaft weniger Gegentore kassiert (der Wert wird mit einem Minuszeichen angegeben), also gilt: „hohe Verteidigungsleistung = gute Verteidigung“; oben rechts im Diagramm = stark in beiden Bereichen.
 
 ```{r}
 # Task 2 — Attack vs Defense Scatter-Plot
@@ -252,7 +259,11 @@ ggplot(plot_data, aes(x = att_mean, y = def_mean, label = team_name)) +
   theme_minimal()
 ```
 
-### Task 3 — Predict a future match and score its NLPD
+> **Erklärung**:
+>
+> - Die Quadranten zeigen die stärke der Teams im Vergleich. Hierbei ist **oben rechts** ein Zeichen für starken angriff (`attack`) **und** großes 
+
+### Aufgabe 3 – Prognostizieren Sie ein zukünftiges Spiel und berechnen Sie dessen NLPD
 
 Pick a match from the test set (a future match the model has not seen). A nice one is row 5: Borussia Dortmund vs Bayern Munich (Der Klassiker).
 
