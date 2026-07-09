@@ -1,0 +1,126 @@
+---
+title: "exercise_01"
+output: html_document
+date: "2026-06-10"
+format:
+  html:
+    author: ""
+  pdf: default
+
+metadata-files:
+  - ../../.private.yml
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Robust Regression
+
+In dieser Übung untersuchen wir den vorteilhaften Einsatz der t-Verteilung für die robuste Regression.
+Verwenden Sie den folgenden Code, um einige Daten zu generieren, darunter zwei Ausreißer.
+
+```{r}
+######## Creating Data #####
+s <- matrix(c(1, .6, .6, 1), nrow = 2, ncol = 2)
+set.seed(3)
+
+#Data w/o outliers
+d = data.frame(MASS::mvrnorm(n = 100, mu = c(0,0), Sigma = s))
+colnames(d) = c('y','x')
+
+#sorting
+idx = sort(d$x, index.return = TRUE)$ix
+d = d[idx,1:2]
+o <- d
+
+dat_no_outlier = list(
+  N = nrow(o),
+  x = o$x,
+  y = o$y
+)
+
+o[c(1:2), 1] <- c(5, 4.5)
+
+dat = list(
+  N = nrow(o),
+  x = o$x,
+  y = o$y
+)
+
+plot(y ~ x, dat, main='data with 2 outliers')
+```
+
+## a)
+Passen Sie ein lineares Modell an die Daten an (mit und ohne Ausreißer). 
+Nehmen Sie für die Steigung (*slope*) und den Achsenabschnitt (*intercept*) Normalverteilungen als A-priori-Verteilungen an, die um Null zentriert sind und eine Standardabweichung von 10 haben. 
+Nehmen Sie für Sigma eine Halbnormalverteilung mit einer Standardabweichung von 10 an. 
+Vergleichen Sie die A-posteriori-Verteilungen für die Steigung $a$.
+
+```{r}
+suppressMessages(suppressWarnings(library(cmdstanr)))
+
+m <- cmdstan_model('robust_reg.stan')
+
+# Fit ohne Ausreißer
+post_no_outlier <- m$sample(
+  data = dat_no_outlier,
+  seed = 42,
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  refresh = 500
+)
+samples_no_outlier <- post_no_outlier$draws(format = "df")
+
+# Fit mit Ausreißern
+post_outlier <- m$sample(
+  data = dat,
+  seed = 42,
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  refresh = 500
+)
+samples_outlier <- post_outlier$draws(format = "df")
+```
+
+```{r}
+plot(density(samples_no_outlier$a),
+     col = "steelblue", lwd = 2,
+     xlim = range(c(samples_no_outlier$a, samples_outlier$a)),
+     main = "Posterior von a (Steigung): mit vs. ohne Ausreißer",
+     xlab = "a")
+lines(density(samples_outlier$a), col = "red", lwd = 2)
+abline(v = mean(samples_no_outlier$a), col = "steelblue", lty = 2)
+abline(v = mean(samples_outlier$a), col = "red", lty = 2)
+
+legend("topright",
+       legend = c("ohne Ausreißer", "mit Ausreißern"),
+       col = c("steelblue", "red"), lwd = 2)
+```
+
+## b)
+Stellen Sie die Daten grafisch dar und fügen Sie $(E(y|x) = \bar{a} \cdot x + \bar{b})$ ein, wobei $(\bar{a})$ und $(\bar{b})$ die jeweiligen posterioren Mittelwerte (*respective posterior means*) sind.
+
+## c)
+Robuste Regression: Passen Sie den obigen Stan-Code so an, dass anstelle einer Gauß-Verteilung eine t-Verteilung ausgegeben wird. 
+Siehe z. B. [https://mc-stan.org/docs/2_18/functions-reference/student-t-distribution.html](https://mc-stan.org/docs/2_18/functions-reference/student-t-distribution.html), wie man eine t-Verteilung parametrisiert. 
+Stellen Sie sicher, dass der Parameter $(\nu \ge 1)$ ist. 
+Zeichnen Sie $(E(y|x) = \bar{a} \cdot x + \bar{b})$ auf. 
+Passen Sie die robuste Regression an die Daten mit den Ausreißern an und zeichnen Sie sie auf.
+
+
+## d
+Führen Sie eine Schätzung mittels **Leave-One-Out-Kreuzvalidierung (PSIS-LOO)** durch, wobei Sie die Funktion `loo` aus dem Paket `loo` verwenden. 
+Beachten Sie, dass die Funktion `loo` die Log-Likelihoods der Daten benötigt. 
+Die Log-Likelihoods lassen sich mit dem folgenden Code in Stan ermitteln
+
+```stan
+generated quantities {
+  vector[N] log_lik;
+  for (n in 1:N) {
+    log_lik[n] = normal_lpdf(y[n] | a * x[n] + b, sigma);
+  }
+}
+```
